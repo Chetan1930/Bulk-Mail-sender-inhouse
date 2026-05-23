@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String   @default("")
+  role      String   @default("manager") // "admin" | "manager"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaigns  Campaign[]
+  templates  Template[]
+}
+
+model Campaign {
+  id         String   @id @default(uuid())
+  name       String
+  subject    String
+  body       String
+  templateId String?
+  provider   String   @default("sendgrid") // "sendgrid" | "smtp" | "ses"
+  senderEmail String
+  senderName  String   @default("")
+  status     String   @default("draft") // "draft" | "processing" | "completed" | "failed" | "paused"
+  totalRecipients Int  @default(0)
+  sentCount  Int      @default(0)
+  failedCount Int     @default(0)
+  retryCount Int      @default(0)
+  smtpConfig Json?
+  sendgridApiKey String?
+  scheduledAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+
+  recipients CampaignRecipient[]
+  logs       CampaignLog[]
+}
+
+model CampaignRecipient {
+  id            String    @id @default(uuid())
+  email         String
+  variablesJson String    @default("{}")
+  status        String    @default("pending") // "pending" | "sent" | "failed" | "retried"
+  response      String?
+  retryCount    Int       @default(0)
+  errorMessage  String?
+  sentAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  campaignId    String
+  campaign      Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model CampaignLog {
+  id         String   @id @default(uuid())
+  message    String
+  level      String   @default("info") // "info" | "warn" | "error"
+  createdAt  DateTime @default(now())
+
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+}
+
+model Template {
+  id        String   @id @default(uuid())
+  name      String
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}

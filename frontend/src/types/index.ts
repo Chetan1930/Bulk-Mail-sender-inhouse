@@ -1,0 +1,99 @@
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'manager';
+  createdAt: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  templateId: string | null;
+  provider: string;
+  senderEmail: string;
+  senderName: string;
+  status: CampaignStatus;
+  totalRecipients: number;
+  sentCount: number;
+  failedCount: number;
+  retryCount: number;
+  smtpConfig: SmtpConfig | null;
+  sendgridApiKey: string | null;
+  scheduledAt: string | null;
+  createdAt: string;
+  userId: string;
+  user?: User;
+  recipients?: CampaignRecipient[];
+  logs?: CampaignLog[];
+  _count?: { recipients: number };
+}
+
+export type CampaignStatus = 'draft' | 'processing' | 'completed' | 'failed' | 'paused';
+
+export interface CampaignRecipient {
+  id: string;
+  email: string;
+  variablesJson: string;
+  status: RecipientStatus;
+  response: string | null;
+  retryCount: number;
+  errorMessage: string | null;
+  sentAt: string | null;
+  createdAt: string;
+}
+
+export type RecipientStatus = 'pending' | 'sent' | 'failed' | 'retried';
+
+export interface CampaignLog {
+  id: string;
+  message: string;
+  level: 'info' | 'warn' | 'error';
+  createdAt: string;
+}
+
+export interface SmtpConfig {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  secure?: boolean;
+}
+
+export interface DashboardStats {
+  totalCampaigns: number;
+  totalSent: number;
+  totalFailed: number;
+  activeCampaigns: number;
+  recentCampaigns: Array<{
+    id: string;
+    name: string;
+    status: string;
+    totalRecipients: number;
+    sentCount: number;
+    failedCount: number;
+    createdAt: string;
+  }>;
+}
+
+export interface CsvPreview {
+  headers: string[];
+  preview: Record<string, string>[];
+  totalRows: number;
+  variableValidation: {
+    missing: string[];
+    found: string[];
+    allPresent: boolean;
+  } | null;
+}
+
+export interface WsMessage {
+  type: string;
+  campaignId: string;
+  sentCount: number;
+  failedCount: number;
+  totalRecipients: number;
+  status: string;
+}
