@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { Campaign, CampaignRecipient, WsMessage } from '../types';
-import { ArrowLeft, Send, AlertCircle, CheckCircle, Clock, FileText, Download, Copy, BarChart3 } from 'lucide-react';
+import { Campaign, WsMessage } from '../types';
+import {
+  ArrowLeft, Send, AlertCircle, CheckCircle, Clock,
+  FileText, Download, Copy, BarChart3, Users,
+} from 'lucide-react';
 
 const statusColors: Record<string, string> = {
   draft: 'badge-gray',
@@ -40,34 +43,23 @@ export default function CampaignDetail() {
     }
   }, [id]);
 
-  useEffect(() => {
-    loadCampaign();
-  }, [loadCampaign]);
+  useEffect(() => { loadCampaign(); }, [loadCampaign]);
 
-  // WebSocket connection for real-time updates
   useEffect(() => {
     if (!id || campaign?.status !== 'processing') return;
-
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
-    const ws = new WebSocket(wsUrl);
-
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
     ws.onmessage = (event) => {
       try {
         const data: WsMessage = JSON.parse(event.data);
         if (data.type === 'campaign-progress' && data.campaignId === id) {
-          setCampaign(prev => prev ? {
-            ...prev,
-            sentCount: data.sentCount,
-            failedCount: data.failedCount,
-            status: data.status as Campaign['status'],
-          } : prev);
+          setCampaign(prev =>
+            prev ? { ...prev, sentCount: data.sentCount, failedCount: data.failedCount, status: data.status as Campaign['status'] } : prev
+          );
         }
       } catch {}
     };
-
-    ws.onerror = () => console.log('WebSocket connection error');
-
+    ws.onerror = () => {};
     return () => ws.close();
   }, [id, campaign?.status]);
 
@@ -87,8 +79,8 @@ export default function CampaignDetail() {
   const handleDuplicate = async () => {
     if (!id) return;
     try {
-      const newCampaign = await api.duplicateCampaign(id);
-      navigate(`/campaigns/${newCampaign.id}`);
+      const c = await api.duplicateCampaign(id);
+      navigate(`/campaigns/${c.id}`);
     } catch (err: any) {
       setError(err.message);
     }
@@ -99,9 +91,10 @@ export default function CampaignDetail() {
     setExportingFailed(true);
     try {
       const failed = await api.exportFailedEmails(id);
-      const csv = ['Email,Error,Retry Count,Created At', ...failed.map(r =>
-        `"${r.email}","${r.errorMessage || ''}",${r.retryCount},"${r.createdAt}"`
-      )].join('\n');
+      const csv = [
+        'Email,Error,Retry Count,Created At',
+        ...failed.map(r => `"${r.email}","${r.errorMessage || ''}",${r.retryCount},"${r.createdAt}"`),
+      ].join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -119,40 +112,90 @@ export default function CampaignDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-2 border-primary-200 dark:border-primary-900 border-t-primary-600 animate-spin" />
+          <p className="text-sm text-gray-400">Loading campaign...</p>
+        </div>
       </div>
     );
   }
 
   if (error || !campaign) {
     return (
-      <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+      <div className="p-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl">
         <p className="text-red-700 dark:text-red-300">{error || 'Campaign not found'}</p>
-        <Link to="/" className="btn-secondary mt-4 inline-flex">Back to Dashboard</Link>
+        <Link to="/" className="btn-secondary mt-4 inline-flex">
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+        </Link>
       </div>
     );
   }
 
+  const processed = campaign.sentCount + campaign.failedCount;
   const progress = campaign.totalRecipients > 0
-    ? Math.round(((campaign.sentCount + campaign.failedCount) / campaign.totalRecipients) * 100)
+    ? Math.round((processed / campaign.totalRecipients) * 100)
     : 0;
+
+  const statCards = [
+    {
+      label: 'Recipients',
+      value: campaign.totalRecipients,
+      icon: Users,
+      color: 'text-primary-600 dark:text-primary-400',
+      bg: 'bg-primary-100 dark:bg-primary-900/40',
+    },
+    {
+      label: 'Sent',
+      value: campaign.sentCount,
+      icon: CheckCircle,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-100 dark:bg-emerald-900/40',
+      valColor: 'text-emerald-600 dark:text-emerald-400',
+    },
+    {
+      label: 'Failed',
+      value: campaign.failedCount,
+      icon: AlertCircle,
+      color: 'text-red-600 dark:text-red-400',
+      bg: 'bg-red-100 dark:bg-red-900/40',
+      valColor: 'text-red-600 dark:text-red-400',
+    },
+    {
+      label: 'Pending',
+      value: campaign.totalRecipients - processed,
+      icon: Clock,
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-100 dark:bg-amber-900/40',
+      valColor: 'text-amber-600 dark:text-amber-400',
+    },
+  ];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Link to="/" className="p-2 rounded-lg text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+      {/* Header */}
+      <div className="flex items-start gap-4">
+        <Link
+          to="/"
+          className="mt-1 p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex-shrink-0"
+        >
           <ArrowLeft className="w-5 h-5" />
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{campaign.name}</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">{campaign.name}</h1>
             <span className={statusColors[campaign.status] || 'badge-gray'}>{campaign.status}</span>
           </div>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Created {new Date(campaign.createdAt).toLocaleDateString()}</p>
+          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+            Created {new Date(campaign.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
           {campaign.status === 'draft' && (
-            <button onClick={handleStart} disabled={starting || campaign.totalRecipients === 0} className="btn-success">
+            <button
+              onClick={handleStart}
+              disabled={starting || campaign.totalRecipients === 0}
+              className="btn-success"
+            >
               <Send className="w-4 h-4" />
               {starting ? 'Starting...' : 'Start Campaign'}
             </button>
@@ -174,162 +217,171 @@ export default function CampaignDetail() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card">
-          <div className="card-body">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Total Recipients</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{campaign.totalRecipients}</p>
-              </div>
-              <div className="w-12 h-12 bg-primary-100 dark:bg-primary-900/30 rounded-xl flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-primary-600 dark:text-primary-400" />
-              </div>
-            </div>
-          </div>
+      {error && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl text-sm text-red-700 dark:text-red-300">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" /> {error}
         </div>
+      )}
 
-        <div className="card">
-          <div className="card-body">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Sent</p>
-                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{campaign.sentCount}</p>
-              </div>
-              <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-body">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Failed</p>
-                <p className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">{campaign.failedCount}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
-                <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((s) => (
+          <div key={s.label} className="card hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+            <div className="card-body">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                    {s.label}
+                  </p>
+                  <p className={`text-3xl font-bold mt-2 tabular-nums ${s.valColor || 'text-gray-900 dark:text-white'}`}>
+                    {s.value.toLocaleString()}
+                  </p>
+                </div>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${s.bg}`}>
+                  <s.icon className={`w-5 h-5 ${s.color}`} />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="card">
-          <div className="card-body">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Pending</p>
-                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">
-                  {campaign.totalRecipients - campaign.sentCount - campaign.failedCount}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
-                <Clock className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-              </div>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress */}
       <div className="card">
         <div className="card-body">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Progress</h3>
-            <span className="text-sm text-gray-500 dark:text-gray-400">{progress}%</span>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-gray-400" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Delivery Progress</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{progress}%</span>
+            </div>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+          <div className="relative w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full transition-all duration-500 ease-out"
+              className={`h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden ${
+                campaign.status === 'processing'
+                  ? 'bg-gradient-to-r from-primary-500 to-violet-500 shimmer-bar'
+                  : campaign.status === 'completed'
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                  : 'bg-gradient-to-r from-primary-500 to-primary-400'
+              }`}
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-            <span>{campaign.sentCount + campaign.failedCount} / {campaign.totalRecipients} processed</span>
-            <span>{campaign.sentCount} sent / {campaign.failedCount} failed</span>
+          <div className="flex items-center justify-between mt-2.5">
+            <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">
+              {processed.toLocaleString()} / {campaign.totalRecipients.toLocaleString()} processed
+            </span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              <span className="text-emerald-500">{campaign.sentCount.toLocaleString()} sent</span>
+              {' · '}
+              <span className="text-red-500">{campaign.failedCount.toLocaleString()} failed</span>
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Campaign Info */}
+      {/* Info + Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <div className="card-header">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Campaign Info</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+              Campaign Info
+            </h3>
           </div>
-          <div className="card-body space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Subject</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">{campaign.subject}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Provider</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">{campaign.provider}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Sender</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">{campaign.senderEmail}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Created</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">{new Date(campaign.createdAt).toLocaleString()}</span>
-            </div>
+          <div className="card-body space-y-0 divide-y divide-gray-100 dark:divide-gray-700/50">
+            {[
+              { label: 'Subject', value: campaign.subject },
+              { label: 'Provider', value: campaign.provider.charAt(0).toUpperCase() + campaign.provider.slice(1) },
+              { label: 'From', value: campaign.senderEmail },
+              { label: 'Created', value: new Date(campaign.createdAt).toLocaleString() },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex items-center justify-between py-3">
+                <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{label}</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white text-right max-w-[60%] truncate">{value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="card">
           <div className="card-header">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Email Body Preview</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+              Email Preview
+            </h3>
           </div>
-          <div className="card-body">
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-              <div className="p-4 bg-white dark:bg-gray-900 max-h-64 overflow-auto" dangerouslySetInnerHTML={{ __html: campaign.body }} />
+          <div className="card-body p-0">
+            <div className="rounded-b-2xl overflow-hidden">
+              <div
+                className="p-5 bg-white dark:bg-gray-900 max-h-64 overflow-auto text-sm"
+                dangerouslySetInnerHTML={{ __html: campaign.body }}
+              />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recipients List */}
+      {/* Recipients */}
       <div className="card">
         <div className="card-header flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Recipients</h3>
-          <span className="text-sm text-gray-500 dark:text-gray-400">{campaign.recipients?.length || 0} shown</span>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+            Recent Recipients
+          </h3>
+          <span className="text-xs text-gray-400 dark:text-gray-500">
+            {campaign.recipients?.length || 0} shown
+          </span>
         </div>
         <div className="overflow-x-auto">
           {campaign.recipients && campaign.recipients.length > 0 ? (
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Retries</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Response</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Sent At</th>
+                <tr className="border-b border-gray-100 dark:border-gray-700/50">
+                  {['Email', 'Status', 'Retries', 'Response', 'Sent At'].map(h => (
+                    <th
+                      key={h}
+                      className="px-6 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-left"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {campaign.recipients.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                    <td className="px-6 py-3 text-sm text-gray-900 dark:text-white">{r.email}</td>
+              <tbody>
+                {campaign.recipients.map((r, i) => (
+                  <tr
+                    key={r.id}
+                    className={`transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-700/20 ${
+                      i % 2 === 1 ? 'bg-gray-50/40 dark:bg-gray-800/20' : ''
+                    }`}
+                  >
+                    <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{r.email}</td>
                     <td className="px-6 py-3">
                       <span className={recipientStatusColors[r.status] || 'badge-gray'}>{r.status}</span>
                     </td>
-                    <td className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">{r.retryCount}</td>
-                    <td className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-[200px] truncate">{r.response || r.errorMessage || '-'}</td>
-                    <td className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400">{r.sentAt ? new Date(r.sentAt).toLocaleString() : '-'}</td>
+                    <td className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400 tabular-nums">{r.retryCount}</td>
+                    <td className="px-6 py-3 text-sm text-gray-400 dark:text-gray-500 max-w-[200px] truncate">
+                      {r.response || r.errorMessage || '—'}
+                    </td>
+                    <td className="px-6 py-3 text-sm text-gray-400 dark:text-gray-500 tabular-nums">
+                      {r.sentAt ? new Date(r.sentAt).toLocaleString() : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <div className="text-center py-12">
-              <Send className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400">No recipients yet</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Upload a CSV file to add recipients</p>
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700/50 rounded-2xl flex items-center justify-center">
+                <Send className="w-7 h-7 text-gray-300 dark:text-gray-600" />
+              </div>
+              <div className="text-center">
+                <p className="font-semibold text-gray-600 dark:text-gray-400">No recipients yet</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                  Upload a CSV file to add recipients
+                </p>
+              </div>
             </div>
           )}
         </div>

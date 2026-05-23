@@ -1,6 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Send, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 
 export default function Login() {
   const { login } = useAuth();
@@ -24,76 +24,119 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-primary-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 rounded-2xl mb-4">
-            <Send className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-48 -right-48 w-96 h-96 bg-primary-600/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-48 -left-48 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary-500/5 rounded-full blur-3xl" />
+        {/* Grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage:
+              'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        {/* Logo */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-violet-600 rounded-2xl mb-5 shadow-2xl shadow-primary-500/30">
+            <Mail className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">MailFlow</h1>
-          <p className="mt-2 text-gray-500 dark:text-gray-400">Bulk Email Campaign Platform</p>
+          <h1 className="text-4xl font-bold text-white tracking-tight">MailFlow</h1>
+          <p className="mt-2 text-slate-400 text-sm">Bulk Email Campaign Platform</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Sign in to your account</h2>
+        {/* Card */}
+        <div className="relative bg-white/[0.04] backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+          {/* Top gradient line */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary-500/60 to-transparent" />
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
-              {error}
-            </div>
-          )}
+          <div className="p-8">
+            <h2 className="text-xl font-semibold text-white mb-1">Welcome back</h2>
+            <p className="text-sm text-slate-400 mb-7">Sign in to manage your campaigns</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="label" htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                className="input"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="label" htmlFor="password">Password</label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  className="input pr-10"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+            {error && (
+              <div className="mb-5 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-sm text-red-300 flex items-center gap-2.5">
+                <span className="flex-shrink-0 w-4 h-4 text-red-400">⚠</span>
+                {error}
               </div>
-            </div>
+            )}
 
-            <button type="submit" disabled={loading} className="btn-primary w-full">
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Signing in...
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5" htmlFor="email">
+                  Email address
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                  <input
+                    id="email"
+                    type="email"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500/50 transition-all text-sm"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-          </form>
+              </div>
 
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-              Demo accounts: admin@mailflow.com / admin123 or manager@mailflow.com / manager123
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-1.5" htmlFor="password">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    className="w-full pl-10 pr-11 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/40 focus:border-primary-500/50 transition-all text-sm"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 mt-2 py-3 px-4 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-500/25 active:scale-[0.98]"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white" />
+                    Signing in...
+                  </>
+                ) : (
+                  <>
+                    Sign In
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+
+          <div className="px-8 py-4 bg-white/[0.02] border-t border-white/[0.06]">
+            <p className="text-xs text-slate-500 text-center">
+              Demo:{' '}
+              <span className="font-mono text-slate-400">admin@mailflow.com</span>
+              {' / '}
+              <span className="font-mono text-slate-400">admin123</span>
             </p>
           </div>
         </div>
