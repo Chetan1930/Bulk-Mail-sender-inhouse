@@ -4,7 +4,8 @@ import { api } from '../services/api';
 import { Campaign, WsMessage } from '../types';
 import {
   ArrowLeft, Send, AlertCircle, CheckCircle, Clock,
-  FileText, Download, Copy, BarChart3, Users,
+  FileText, Download, Copy, BarChart3, Users, Mail,
+  Calendar,
 } from 'lucide-react';
 
 const statusColors: Record<string, string> = {
@@ -111,19 +112,33 @@ export default function CampaignDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 rounded-full border-2 border-primary-200 dark:border-primary-900 border-t-primary-600 animate-spin" />
-          <p className="text-sm text-gray-400">Loading campaign...</p>
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <div className="skeleton w-10 h-10 rounded-xl" />
+          <div className="space-y-2 flex-1">
+            <div className="skeleton h-7 w-64" />
+            <div className="skeleton h-4 w-40" />
+          </div>
         </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(i => <div key={i} className="skeleton-card h-28" />)}
+        </div>
+        <div className="skeleton-card h-24" />
       </div>
     );
   }
 
   if (error || !campaign) {
     return (
-      <div className="p-5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl">
-        <p className="text-red-700 dark:text-red-300">{error || 'Campaign not found'}</p>
+      <div className="p-6 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-2xl animate-fade-in">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+          </div>
+          <div>
+            <p className="font-semibold text-red-700 dark:text-red-300">{error || 'Campaign not found'}</p>
+          </div>
+        </div>
         <Link to="/" className="btn-secondary mt-4 inline-flex">
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </Link>
@@ -138,7 +153,7 @@ export default function CampaignDetail() {
 
   const statCards = [
     {
-      label: 'Recipients',
+      label: 'Total Recipients',
       value: campaign.totalRecipients,
       icon: Users,
       color: 'text-primary-600 dark:text-primary-400',
@@ -171,12 +186,12 @@ export default function CampaignDetail() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 page-enter">
       {/* Header */}
       <div className="flex items-start gap-4">
         <Link
           to="/"
-          className="mt-1 p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex-shrink-0"
+          className="mt-1 p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:text-gray-500 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-surface-700/50 transition-all flex-shrink-0"
         >
           <ArrowLeft className="w-5 h-5" />
         </Link>
@@ -185,7 +200,8 @@ export default function CampaignDetail() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">{campaign.name}</h1>
             <span className={statusColors[campaign.status] || 'badge-gray'}>{campaign.status}</span>
           </div>
-          <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5" />
             Created {new Date(campaign.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
@@ -194,7 +210,7 @@ export default function CampaignDetail() {
             <button
               onClick={handleStart}
               disabled={starting || campaign.totalRecipients === 0}
-              className="btn-success"
+              className="btn-success shadow-lg shadow-emerald-500/20"
             >
               <Send className="w-4 h-4" />
               {starting ? 'Starting...' : 'Start Campaign'}
@@ -202,42 +218,42 @@ export default function CampaignDetail() {
           )}
           <button onClick={handleDuplicate} className="btn-secondary">
             <Copy className="w-4 h-4" />
-            Duplicate
+            <span className="hidden sm:inline">Duplicate</span>
           </button>
           {campaign.failedCount > 0 && (
             <button onClick={handleExportFailed} disabled={exportingFailed} className="btn-secondary">
               <Download className="w-4 h-4" />
-              {exportingFailed ? 'Exporting...' : 'Export Failed'}
+              <span className="hidden sm:inline">{exportingFailed ? 'Exporting...' : 'Export Failed'}</span>
             </button>
           )}
-          <Link to={`/campaigns/${id}/logs`} className="btn-secondary">
+          <Link to={`/campaigns/${id}/logs`} className="btn-soft">
             <FileText className="w-4 h-4" />
-            Logs
+            <span className="hidden sm:inline">Logs</span>
           </Link>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl text-sm text-red-700 dark:text-red-300">
+        <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/50 rounded-2xl text-sm text-red-700 dark:text-red-300 animate-fade-in-down">
           <AlertCircle className="w-4 h-4 flex-shrink-0" /> {error}
         </div>
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-enter">
         {statCards.map((s) => (
-          <div key={s.label} className="card hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
+          <div key={s.label} className="card-hover">
             <div className="card-body">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="space-y-2">
                   <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                     {s.label}
                   </p>
-                  <p className={`text-3xl font-bold mt-2 tabular-nums ${s.valColor || 'text-gray-900 dark:text-white'}`}>
+                  <p className={`text-3xl font-bold tabular-nums tracking-tight ${s.valColor || 'text-gray-900 dark:text-white'}`}>
                     {s.value.toLocaleString()}
                   </p>
                 </div>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${s.bg}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${s.bg}`}>
                   <s.icon className={`w-5 h-5 ${s.color}`} />
                 </div>
               </div>
@@ -247,38 +263,38 @@ export default function CampaignDetail() {
       </div>
 
       {/* Progress */}
-      <div className="card">
+      <div className="card-gradient border border-primary-100/50 dark:border-primary-900/30">
         <div className="card-body">
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-gray-400" />
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Delivery Progress</h3>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                <BarChart3 className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Delivery Progress</h3>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{processed.toLocaleString()} of {campaign.totalRecipients.toLocaleString()} processed</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-gray-900 dark:text-white tabular-nums">{progress}%</span>
+            <div className="text-right">
+              <p className="text-3xl font-bold text-gray-900 dark:text-white tabular-nums tracking-tight">{progress}%</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                <span className="text-emerald-500 font-medium">{campaign.sentCount.toLocaleString()} sent</span>
+                {' · '}
+                <span className="text-red-500 font-medium">{campaign.failedCount.toLocaleString()} failed</span>
+              </p>
             </div>
           </div>
-          <div className="relative w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+          <div className="progress-bar h-3 mt-1">
             <div
-              className={`h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden ${
+              className={`progress-bar-fill relative ${
                 campaign.status === 'processing'
-                  ? 'bg-gradient-to-r from-primary-500 to-violet-500 shimmer-bar'
+                  ? 'shimmer-bar'
                   : campaign.status === 'completed'
-                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-                  : 'bg-gradient-to-r from-primary-500 to-primary-400'
-              }`}
+                  ? 'success'
+                  : 'primary'
+              } ${campaign.status === 'processing' ? '' : ''}`}
               style={{ width: `${progress}%` }}
             />
-          </div>
-          <div className="flex items-center justify-between mt-2.5">
-            <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">
-              {processed.toLocaleString()} / {campaign.totalRecipients.toLocaleString()} processed
-            </span>
-            <span className="text-xs text-gray-400 dark:text-gray-500">
-              <span className="text-emerald-500">{campaign.sentCount.toLocaleString()} sent</span>
-              {' · '}
-              <span className="text-red-500">{campaign.failedCount.toLocaleString()} failed</span>
-            </span>
           </div>
         </div>
       </div>
@@ -287,18 +303,21 @@ export default function CampaignDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <div className="card-header">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
-              Campaign Info
-            </h3>
+            <div className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-gray-400" />
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+                Campaign Info
+              </h3>
+            </div>
           </div>
-          <div className="card-body space-y-0 divide-y divide-gray-100 dark:divide-gray-700/50">
+          <div className="card-body space-y-0 divide-y divide-gray-100 dark:divide-surface-700/50">
             {[
               { label: 'Subject', value: campaign.subject },
               { label: 'Provider', value: campaign.provider.charAt(0).toUpperCase() + campaign.provider.slice(1) },
               { label: 'From', value: campaign.senderEmail },
               { label: 'Created', value: new Date(campaign.createdAt).toLocaleString() },
             ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between py-3">
+              <div key={label} className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0">
                 <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{label}</span>
                 <span className="text-sm font-medium text-gray-900 dark:text-white text-right max-w-[60%] truncate">{value}</span>
               </div>
@@ -308,14 +327,17 @@ export default function CampaignDetail() {
 
         <div className="card">
           <div className="card-header">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
-              Email Preview
-            </h3>
+            <div className="flex items-center gap-2">
+              <Send className="w-4 h-4 text-gray-400" />
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+                Email Preview
+              </h3>
+            </div>
           </div>
           <div className="card-body p-0">
             <div className="rounded-b-2xl overflow-hidden">
               <div
-                className="p-5 bg-white dark:bg-gray-900 max-h-64 overflow-auto text-sm"
+                className="p-5 bg-white dark:bg-surface-900 max-h-64 overflow-auto text-sm"
                 dangerouslySetInnerHTML={{ __html: campaign.body }}
               />
             </div>
@@ -326,9 +348,12 @@ export default function CampaignDetail() {
       {/* Recipients */}
       <div className="card">
         <div className="card-header flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
-            Recent Recipients
-          </h3>
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-gray-400" />
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+              Recent Recipients
+            </h3>
+          </div>
           <span className="text-xs text-gray-400 dark:text-gray-500">
             {campaign.recipients?.length || 0} shown
           </span>
@@ -337,11 +362,11 @@ export default function CampaignDetail() {
           {campaign.recipients && campaign.recipients.length > 0 ? (
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100 dark:border-gray-700/50">
+                <tr>
                   {['Email', 'Status', 'Retries', 'Response', 'Sent At'].map(h => (
                     <th
                       key={h}
-                      className="px-6 py-3 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-left"
+                      className="px-6 py-3.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-left"
                     >
                       {h}
                     </th>
@@ -352,29 +377,27 @@ export default function CampaignDetail() {
                 {campaign.recipients.map((r, i) => (
                   <tr
                     key={r.id}
-                    className={`transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-700/20 ${
-                      i % 2 === 1 ? 'bg-gray-50/40 dark:bg-gray-800/20' : ''
-                    }`}
+                    className="transition-colors hover:bg-gray-50/80 dark:hover:bg-surface-700/20"
                   >
-                    <td className="px-6 py-3 text-sm font-medium text-gray-900 dark:text-white">{r.email}</td>
-                    <td className="px-6 py-3">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{r.email}</td>
+                    <td className="px-6 py-4">
                       <span className={recipientStatusColors[r.status] || 'badge-gray'}>{r.status}</span>
                     </td>
-                    <td className="px-6 py-3 text-sm text-gray-500 dark:text-gray-400 tabular-nums">{r.retryCount}</td>
-                    <td className="px-6 py-3 text-sm text-gray-400 dark:text-gray-500 max-w-[200px] truncate">
-                      {r.response || r.errorMessage || '—'}
+                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 tabular-nums">{r.retryCount}</td>
+                    <td className="px-6 py-4 text-sm text-gray-400 dark:text-gray-500 max-w-[200px] truncate">
+                      {r.response || r.errorMessage || <span className="text-gray-300 dark:text-gray-600">—</span>}
                     </td>
-                    <td className="px-6 py-3 text-sm text-gray-400 dark:text-gray-500 tabular-nums">
-                      {r.sentAt ? new Date(r.sentAt).toLocaleString() : '—'}
+                    <td className="px-6 py-4 text-sm text-gray-400 dark:text-gray-500 tabular-nums">
+                      {r.sentAt ? new Date(r.sentAt).toLocaleString() : <span className="text-gray-300 dark:text-gray-600">—</span>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           ) : (
-            <div className="flex flex-col items-center justify-center py-16 gap-4">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700/50 rounded-2xl flex items-center justify-center">
-                <Send className="w-7 h-7 text-gray-300 dark:text-gray-600" />
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <Send className="w-7 h-7" />
               </div>
               <div className="text-center">
                 <p className="font-semibold text-gray-600 dark:text-gray-400">No recipients yet</p>

@@ -5,6 +5,7 @@ import { CsvPreview } from '../types';
 import {
   Upload, Eye, EyeOff, Send, AlertCircle, CheckCircle,
   ChevronRight, ChevronLeft, FileSpreadsheet, Server,
+  Mail, Settings, Users,
 } from 'lucide-react';
 
 interface CampaignForm {
@@ -53,9 +54,9 @@ const htmlTemplate = `<!DOCTYPE html>
 </html>`;
 
 const steps = [
-  { label: 'Campaign Details', desc: 'Name, subject & email body' },
-  { label: 'Upload Recipients', desc: 'CSV or Excel file' },
-  { label: 'Review & Send', desc: 'Confirm and launch' },
+  { label: 'Details', desc: 'Campaign info & content', icon: Settings },
+  { label: 'Recipients', desc: 'Upload CSV file', icon: Users },
+  { label: 'Review', desc: 'Confirm & launch', icon: Send },
 ];
 
 export default function CreateCampaign() {
@@ -170,77 +171,88 @@ export default function CreateCampaign() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-8 page-enter">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create Campaign</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Set up a new bulk email campaign in 3 steps
+          Set up a new bulk email campaign in 3 simple steps
         </p>
       </div>
 
       {/* Stepper */}
-      <div className="relative flex items-start gap-0">
-        {steps.map((s, i) => {
-          const num = i + 1;
-          const isActive = step === num;
-          const isDone = step > num;
-          return (
-            <div key={i} className="flex-1 flex items-start gap-2 relative">
-              {/* Connector line */}
-              {i < steps.length - 1 && (
-                <div className="absolute left-1/2 top-4 w-full h-0.5 z-0">
-                  <div className="absolute inset-0 bg-gray-200 dark:bg-gray-700" />
-                  {isDone && <div className="absolute inset-0 bg-primary-500 transition-all duration-500" />}
-                </div>
-              )}
-              <div className="flex flex-col items-center flex-1 relative z-10">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                    isDone
-                      ? 'bg-primary-500 text-white shadow-sm shadow-primary-500/30'
-                      : isActive
-                      ? 'bg-primary-600 text-white ring-4 ring-primary-100 dark:ring-primary-900/40'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                  }`}
-                >
-                  {isDone ? <CheckCircle className="w-4 h-4" /> : num}
-                </div>
-                <div className="mt-2 text-center">
-                  <p
-                    className={`text-xs font-semibold ${
+      <div className="relative">
+        <div className="flex items-center justify-between">
+          {steps.map((s, i) => {
+            const num = i + 1;
+            const isActive = step === num;
+            const isDone = step > num;
+            const Icon = s.icon;
+            return (
+              <div key={i} className="flex items-center flex-1 relative">
+                {i < steps.length - 1 && (
+                  <div className="absolute left-[calc(50%+20px)] right-[calc(-50%+20px)] top-5">
+                    <div className="h-0.5 bg-gray-200 dark:bg-surface-700 rounded-full relative overflow-hidden">
+                      <div
+                        className={`absolute inset-0 bg-primary-500 transition-all duration-500 ease-out ${isDone ? 'w-full' : 'w-0'}`}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-col items-center flex-1 relative">
+                  <div
+                    className={`w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                      isDone
+                        ? 'bg-primary-500 text-white shadow-md shadow-primary-500/30 scale-100'
+                        : isActive
+                        ? 'bg-primary-600 text-white ring-4 ring-primary-100 dark:ring-primary-900/40 scale-110'
+                        : 'bg-gray-100 dark:bg-surface-700 text-gray-400 dark:text-gray-500'
+                    }`}
+                  >
+                    {isDone ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                  </div>
+                  <div className="mt-2.5 text-center">
+                    <p className={`text-xs font-bold uppercase tracking-wider ${
                       isActive
                         ? 'text-primary-600 dark:text-primary-400'
                         : isDone
-                        ? 'text-gray-600 dark:text-gray-400'
+                        ? 'text-gray-700 dark:text-gray-300'
                         : 'text-gray-400 dark:text-gray-500'
-                    }`}
-                  >
-                    {s.label}
-                  </p>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500 hidden sm:block">{s.desc}</p>
+                    }`}>
+                      {s.label}
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 hidden sm:block">{s.desc}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl text-sm text-amber-700 dark:text-amber-300">
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-2xl text-sm text-amber-700 dark:text-amber-300 animate-fade-in-down">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          {error}
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Step 1 */}
+      {/* Step 1: Campaign Details */}
       {step === 1 && (
-        <div className="card">
+        <div className="card animate-fade-in-up">
           <div className="card-header">
-            <h2 className="font-semibold text-gray-900 dark:text-white">Campaign Details</h2>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                <Settings className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Campaign Details</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Configure your email campaign</p>
+              </div>
+            </div>
           </div>
-          <div className="card-body space-y-5">
+          <div className="card-body space-y-6">
             {/* Basic info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -262,11 +274,11 @@ export default function CreateCampaign() {
                       onClick={() => updateField('provider', p)}
                       className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-sm font-medium transition-all ${
                         form.provider === p
-                          ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300'
-                          : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-500'
+                          ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 shadow-sm'
+                          : 'border-gray-200 dark:border-surface-600 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-surface-500 hover:text-gray-700 dark:hover:text-gray-300'
                       }`}
                     >
-                      {p === 'sendgrid' ? <Send className="w-3.5 h-3.5" /> : <Server className="w-3.5 h-3.5" />}
+                      {p === 'sendgrid' ? <Mail className="w-3.5 h-3.5" /> : <Server className="w-3.5 h-3.5" />}
                       {p === 'sendgrid' ? 'SendGrid' : 'SMTP'}
                     </button>
                   ))}
@@ -282,8 +294,8 @@ export default function CreateCampaign() {
                 value={form.subject}
                 onChange={e => updateField('subject', e.target.value)}
               />
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
-                Use <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{'{{Variable}}'}</code> for dynamic content from CSV columns
+              <p className="help-text">
+                Use <code>{'{{Variable}}'}</code> for dynamic content from CSV columns
               </p>
             </div>
 
@@ -311,21 +323,28 @@ export default function CreateCampaign() {
 
             {/* Provider config */}
             {form.provider === 'sendgrid' && (
-              <div>
-                <label className="label">SendGrid API Key</label>
-                <input
-                  type="password"
-                  className="input"
-                  placeholder="SG.xxxxxxxx..."
-                  value={form.sendgridApiKey}
-                  onChange={e => updateField('sendgridApiKey', e.target.value)}
-                />
+              <div className="p-5 bg-gray-50/50 dark:bg-surface-900/30 rounded-2xl border border-gray-100 dark:border-surface-700/50 space-y-3">
+                <p className="label-soft flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5" />
+                  SendGrid Configuration
+                </p>
+                <div>
+                  <label className="label">API Key</label>
+                  <input
+                    type="password"
+                    className="input"
+                    placeholder="SG.xxxxxxxx..."
+                    value={form.sendgridApiKey}
+                    onChange={e => updateField('sendgridApiKey', e.target.value)}
+                  />
+                </div>
               </div>
             )}
 
             {form.provider === 'smtp' && (
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/40 rounded-xl border border-gray-100 dark:border-gray-700/50 space-y-3">
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <div className="p-5 bg-gray-50/50 dark:bg-surface-900/30 rounded-2xl border border-gray-100 dark:border-surface-700/50 space-y-4">
+                <p className="label-soft flex items-center gap-2">
+                  <Server className="w-3.5 h-3.5" />
                   SMTP Configuration
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -356,7 +375,7 @@ export default function CreateCampaign() {
                 <button
                   type="button"
                   onClick={() => setShowPreview(!showPreview)}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 bg-primary-50 dark:bg-primary-900/20 px-3 py-1.5 rounded-lg transition-colors"
                 >
                   {showPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   {showPreview ? 'Hide Preview' : 'Preview'}
@@ -368,70 +387,86 @@ export default function CreateCampaign() {
                 onChange={e => updateField('body', e.target.value)}
                 placeholder={htmlTemplate}
               />
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
-                Use <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{'{{ColumnName}}'}</code> to insert CSV values
+              <p className="help-text">
+                Use <code>{'{{ColumnName}}'}</code> to insert CSV values into your email
               </p>
             </div>
 
             {showPreview && form.body && (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-                <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+              <div className="border border-gray-200 dark:border-surface-700 rounded-2xl overflow-hidden animate-fade-in">
+                <div className="px-4 py-3 bg-gray-50/80 dark:bg-surface-800 border-b border-gray-200 dark:border-surface-700 flex items-center gap-2">
                   <Eye className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    Preview (using first CSV row)
-                  </span>
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Preview</span>
                 </div>
-                <div className="p-4 bg-white max-h-72 overflow-auto" dangerouslySetInnerHTML={{ __html: renderPreview() }} />
+                <div className="p-5 bg-white dark:bg-surface-900 max-h-72 overflow-auto" dangerouslySetInnerHTML={{ __html: renderPreview() }} />
               </div>
             )}
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-3">
               <button
                 onClick={() => setStep(2)}
                 disabled={!form.name || !form.subject || !form.body || !form.senderEmail}
                 className="btn-primary"
               >
-                Upload Recipients <ChevronRight className="w-4 h-4" />
+                Continue <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Step 2 */}
+      {/* Step 2: Upload Recipients */}
       {step === 2 && (
-        <div className="card">
+        <div className="card animate-fade-in-up">
           <div className="card-header">
-            <h2 className="font-semibold text-gray-900 dark:text-white">Upload Recipients</h2>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                <Users className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Upload Recipients</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Import your contacts from a CSV file</p>
+              </div>
+            </div>
           </div>
-          <div className="card-body space-y-5">
+          <div className="card-body space-y-6">
+            {/* Drop zone */}
             <div
-              className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 ${
+              className={`relative border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-200 ${
                 dragging
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10'
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10 scale-[1.01]'
                   : file
                   ? 'border-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                  : 'border-gray-200 dark:border-surface-700 hover:border-primary-400 dark:hover:border-primary-500 hover:bg-gray-50 dark:hover:bg-surface-800/50'
               }`}
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
             >
-              <div className={`w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center ${
-                file ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-gray-100 dark:bg-gray-700/50'
+              <div className={`w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center transition-all duration-200 ${
+                file ? 'bg-emerald-100 dark:bg-emerald-900/30 scale-110' : 'bg-gray-100 dark:bg-surface-700/50'
               }`}>
                 {file
                   ? <FileSpreadsheet className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
                   : <Upload className="w-7 h-7 text-gray-400 dark:text-gray-500" />
                 }
               </div>
-              <p className={`text-sm font-semibold ${file ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-700 dark:text-gray-300'}`}>
-                {file ? file.name : 'Drop your file here or click to browse'}
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                Supports .csv and .xlsx files — max 10MB
-              </p>
+              {file ? (
+                <div>
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{file.name}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Click to change file</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Drop your CSV file here, or <span className="text-primary-600 dark:text-primary-400">browse</span>
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    Supports .csv and .xlsx files — max 10MB
+                  </p>
+                </div>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -441,53 +476,69 @@ export default function CreateCampaign() {
               />
             </div>
 
+            {/* CSV Preview */}
             {csvPreview && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800/50">
+              <div className="space-y-4 animate-fade-in-up">
+                <div className="flex items-center gap-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3 rounded-xl border border-emerald-200 dark:border-emerald-800/50">
                   <CheckCircle className="w-4 h-4 flex-shrink-0" />
                   <span>
-                    {csvPreview.totalRows} rows detected with headers:{' '}
-                    <span className="font-mono">{csvPreview.headers.join(', ')}</span>
+                    <strong>{csvPreview.totalRows.toLocaleString()}</strong> rows detected with headers:{' '}
+                    <code className="bg-emerald-100 dark:bg-emerald-800/50 text-emerald-700 dark:text-emerald-300">{csvPreview.headers.join(', ')}</code>
                   </span>
                 </div>
 
                 {csvPreview.variableValidation && (
-                  <div className={`p-3.5 rounded-xl text-sm border ${
+                  <div className={`p-4 rounded-xl text-sm border ${
                     csvPreview.variableValidation.allPresent
                       ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/50'
                       : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/50'
                   }`}>
-                    {csvPreview.variableValidation.allPresent
-                      ? '✓ All template variables found in CSV headers'
-                      : `⚠ Missing headers for template variables: ${csvPreview.variableValidation.missing.join(', ')}`}
+                    <div className="flex items-start gap-2.5">
+                      {csvPreview.variableValidation.allPresent
+                        ? <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        : <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      }
+                      <div>
+                        <p className="font-medium">
+                          {csvPreview.variableValidation.allPresent
+                            ? 'All template variables found in CSV headers'
+                            : `Missing headers: ${csvPreview.variableValidation.missing.join(', ')}`}
+                        </p>
+                        {!csvPreview.variableValidation.allPresent && (
+                          <p className="text-xs mt-1 opacity-80">These variables will render as empty in the email</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
 
                 {csvPreview.preview.length > 0 && (
-                  <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-xl">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-                          {csvPreview.headers.map(h => (
-                            <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {csvPreview.preview.slice(0, 5).map((row, i) => (
-                          <tr key={i} className={i % 2 === 1 ? 'bg-gray-50/50 dark:bg-gray-800/20' : ''}>
+                  <div className="overflow-hidden border border-gray-200 dark:border-surface-700 rounded-2xl">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50/80 dark:bg-surface-800/50 border-b border-gray-200 dark:border-surface-700">
                             {csvPreview.headers.map(h => (
-                              <td key={h} className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{row[h] || '-'}</td>
+                              <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                {h}
+                              </th>
                             ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {csvPreview.preview.slice(0, 5).map((row, i) => (
+                            <tr key={i} className={i % 2 === 1 ? 'bg-gray-50/30 dark:bg-surface-800/20' : ''}>
+                              {csvPreview.headers.map(h => (
+                                <td key={h} className="px-4 py-3 text-gray-600 dark:text-gray-300">{row[h] || <span className="text-gray-300 dark:text-gray-600">—</span>}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                     {csvPreview.totalRows > 5 && (
-                      <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-400 text-center border-t border-gray-200 dark:border-gray-700">
-                        Showing first 5 of {csvPreview.totalRows} rows
+                      <div className="px-4 py-3 bg-gray-50/50 dark:bg-surface-800/30 text-xs text-gray-400 text-center border-t border-gray-200 dark:border-surface-700">
+                        Showing first 5 of {csvPreview.totalRows.toLocaleString()} rows
                       </div>
                     )}
                   </div>
@@ -495,8 +546,8 @@ export default function CreateCampaign() {
               </div>
             )}
 
-            <div className="flex justify-between pt-2">
-              <button onClick={() => setStep(1)} className="btn-secondary">
+            <div className="flex justify-between pt-3">
+              <button onClick={() => setStep(1)} className="btn-ghost">
                 <ChevronLeft className="w-4 h-4" /> Back
               </button>
               <button
@@ -507,10 +558,10 @@ export default function CreateCampaign() {
                 {sending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white" />
-                    Creating...
+                    Creating Campaign...
                   </>
                 ) : (
-                  <>Review & Send <ChevronRight className="w-4 h-4" /></>
+                  <>Review Campaign <ChevronRight className="w-4 h-4" /></>
                 )}
               </button>
             </div>
@@ -518,33 +569,44 @@ export default function CreateCampaign() {
         </div>
       )}
 
-      {/* Step 3 */}
+      {/* Step 3: Review & Launch */}
       {step === 3 && campaignId && (
-        <div className="card">
+        <div className="card animate-fade-in-up">
           <div className="card-header">
-            <h2 className="font-semibold text-gray-900 dark:text-white">Review & Launch</h2>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <Send className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-gray-900 dark:text-white">Review & Launch</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Confirm your campaign details before sending</p>
+              </div>
+            </div>
           </div>
-          <div className="card-body space-y-5">
+          <div className="card-body space-y-6">
+            {/* Summary grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { label: 'Campaign Name', value: form.name },
-                { label: 'Email Provider', value: form.provider === 'sendgrid' ? 'SendGrid' : 'SMTP' },
-                { label: 'Subject Line', value: form.subject },
-                { label: 'Recipients', value: `${uploadResult?.totalRecipients?.toLocaleString() || 0} contacts` },
-                { label: 'Sender', value: `${form.senderName} <${form.senderEmail}>` },
-              ].map(({ label, value }) => (
-                <div key={label} className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                  <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">{label}</p>
+                { label: 'Campaign Name', value: form.name, icon: Settings },
+                { label: 'Email Provider', value: form.provider === 'sendgrid' ? 'SendGrid' : 'SMTP', icon: form.provider === 'sendgrid' ? Mail : Server },
+                { label: 'Subject Line', value: form.subject, icon: Send },
+                { label: 'Recipients', value: `${uploadResult?.totalRecipients?.toLocaleString() || 0} contacts`, icon: Users },
+                { label: 'Sender', value: `${form.senderName} <${form.senderEmail}>`, icon: Mail },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="p-4 bg-gray-50/80 dark:bg-surface-900/50 rounded-xl border border-gray-100 dark:border-surface-700/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon className="w-3.5 h-3.5 text-gray-400" />
+                    <p className="label-soft">{label}</p>
+                  </div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{value}</p>
                 </div>
               ))}
             </div>
 
+            {/* CSV Headers */}
             {uploadResult?.headers && uploadResult.headers.length > 0 && (
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700/50">
-                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2.5">
-                  Detected CSV Columns
-                </p>
+              <div className="p-4 bg-gray-50/80 dark:bg-surface-900/50 rounded-xl border border-gray-100 dark:border-surface-700/50">
+                <p className="label-soft mb-3">Detected CSV Columns</p>
                 <div className="flex flex-wrap gap-2">
                   {uploadResult.headers.map(h => (
                     <span
@@ -558,22 +620,19 @@ export default function CreateCampaign() {
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => navigate(`/campaigns/${campaignId}`)}
-                className="btn-secondary flex-1"
-              >
+            <div className="flex gap-3 pt-3">
+              <button onClick={() => navigate(`/campaigns/${campaignId}`)} className="btn-secondary flex-1">
                 Save as Draft
               </button>
               <button
                 onClick={handleStartCampaign}
                 disabled={sending}
-                className="btn-success flex-1"
+                className="btn-success flex-1 shadow-lg shadow-emerald-500/20"
               >
                 {sending ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/30 border-t-white" />
-                    Starting...
+                    Launching...
                   </>
                 ) : (
                   <>

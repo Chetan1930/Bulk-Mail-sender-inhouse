@@ -56,7 +56,9 @@ export async function deliverRecipientEmail(
     select: { sentCount: true, failedCount: true, totalRecipients: true, status: true },
   });
 
-  if (campaign) {
+  let finalStatus = campaign?.status || 'processing';
+
+  if (campaign && campaign.status !== 'completed') {
     const totalProcessed = campaign.sentCount + campaign.failedCount;
     if (totalProcessed >= campaign.totalRecipients) {
       await prisma.campaign.update({
@@ -70,15 +72,16 @@ export async function deliverRecipientEmail(
           level: 'info',
         },
       });
+      finalStatus = 'completed';
     }
   }
 
-  // Broadcast progress via WebSocket
+  // Broadcast progress via WebSocket with accurate final status
   broadcastProgress({
     campaignId,
     sentCount: campaign?.sentCount || 0,
     failedCount: campaign?.failedCount || 0,
     totalRecipients: campaign?.totalRecipients || 0,
-    status: campaign?.status || 'processing',
+    status: finalStatus,
   });
 }
