@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import CreateCampaign from './pages/CreateCampaign';
 import CampaignDetail from './pages/CampaignDetail';
 import CampaignLogs from './pages/CampaignLogs';
+import Settings from './pages/Settings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="campaigns/new" element={<CreateCampaign />} />
         <Route path="campaigns/:id" element={<CampaignDetail />} />
         <Route path="campaigns/:id/logs" element={<CampaignLogs />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

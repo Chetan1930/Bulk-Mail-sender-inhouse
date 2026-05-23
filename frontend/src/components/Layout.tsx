@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const location = useLocation();
 
   const [darkMode, setDarkMode] = useState(() => {
@@ -18,7 +17,6 @@ export default function Layout() {
 
   useEffect(() => {
     document.documentElement.classList.remove('preload');
-    setMounted(true);
   }, []);
 
   const toggleDarkMode = () => {

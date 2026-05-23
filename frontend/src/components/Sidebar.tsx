@@ -1,15 +1,11 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, LogOut, X, Mail, BarChart3, Settings, Users, ChevronDown } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, LogOut, X, Mail, BarChart3, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useState } from 'react';
 
 const mainNav = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/campaigns/new', icon: PlusCircle, label: 'New Campaign', end: false },
-];
-
-const bottomNav = [
-  { icon: Settings, label: 'Settings', to: '/settings', end: false },
+  { to: '/settings', icon: Settings, label: 'Settings', end: false },
 ];
 
 interface SidebarProps {

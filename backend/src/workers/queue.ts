@@ -1,10 +1,9 @@
-import { Queue, Worker, QueueEvents } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 import IORedis from 'ioredis';
 import { config } from '../config';
 import { deliverRecipientEmail } from '../services/recipientService';
 import { ProviderFactory } from '../providers';
 import { CsvParserService } from '../services/csvParser';
-import { SmtpConfig } from '../types';
 
 const connection = new IORedis(config.redisUrl, {
   maxRetriesPerRequest: null,
@@ -24,7 +23,7 @@ export const emailQueue = new Queue('email-sending', {
   },
 });
 
-export const queueEvents = new QueueEvents('email-sending', { connection });
+
 
 export function startEmailWorker() {
   const worker = new Worker(

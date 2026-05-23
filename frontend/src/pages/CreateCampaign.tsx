@@ -26,7 +26,7 @@ interface CampaignForm {
 const defaultForm: CampaignForm = {
   name: '',
   subject: '',
-  body: '',
+  body: htmlTemplate,
   provider: 'sendgrid',
   senderEmail: '',
   senderName: '',

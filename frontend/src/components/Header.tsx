@@ -1,5 +1,6 @@
 import { Menu, Moon, Sun, Bell, User, LogOut, ChevronDown, Settings } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
@@ -10,6 +11,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick, darkMode, onToggleDarkMode }: HeaderProps) {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -90,7 +92,10 @@ export default function Header({ onMenuClick, darkMode, onToggleDarkMode }: Head
                 </div>
 
                 <div className="py-1">
-                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-surface-700/50 transition-colors">
+                  <button
+                    onClick={() => { setDropdownOpen(false); navigate('/settings'); }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-surface-700/50 transition-colors"
+                  >
                     <Settings className="w-4 h-4" />
                     Settings
                   </button>
