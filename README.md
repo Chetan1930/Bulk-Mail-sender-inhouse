@@ -99,6 +99,8 @@ cp .env.example .env          # Edit JWT_SECRET and FRONTEND_URL for production
 docker compose up -d --build  # Builds and starts all services
 ```
 
+For **EC2 + custom domain** (e.g. `http://sendingmail.chetanchauhan.fun`), see **[deploy/EC2.md](deploy/EC2.md)** and use `deploy/.env.production.example`.
+
 Open **http://localhost** (or the port set via `APP_PORT` in `.env`, default `80`).
 
 Default login (when `SEED_ON_START=true`):
