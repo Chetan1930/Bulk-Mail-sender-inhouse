@@ -37,7 +37,7 @@ dig +short sendingmail.chetanchauhan.fun
 |------|--------|---------|
 | 22 | Your IP | SSH |
 | 80 | 0.0.0.0/0 | HTTP |
-| 443 | 0.0.0.0/0 | HTTPS (when you add Caddy) |
+| 443 | 0.0.0.0/0 | HTTPS (Certbot) |
 
 Do **not** open 3001, 5432, or 6379.
 
@@ -92,12 +92,78 @@ Default login (when `SEED_ON_START=true`):
 
 Then set `SEED_ON_START=false` in `.env` and run `docker compose up -d`.
 
-## 6. Optional — HTTPS with Caddy
+## 6. HTTPS with Certbot (nginx already on port 80)
 
-1. In `.env`, set `APP_PORT=8080` and `FRONTEND_URL=https://sendingmail.chetanchauhan.fun`
-2. Restart: `docker compose up -d`
-3. Install Caddy and use `deploy/Caddyfile` (see comments in that file)
-4. Caddy obtains a Let's Encrypt certificate automatically
+Prerequisites: HTTP works at `http://sendingmail.chetanchauhan.fun`, port **443** open in the security group, DNS points to this server.
+
+### 6a. WebSocket map (one-time, if not already present)
+
+Certbot + campaign live progress need this in `/etc/nginx/nginx.conf` inside the `http { }` block:
+
+```nginx
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+```
+
+```bash
+sudo nano /etc/nginx/nginx.conf   # add the map above inside http { }
+sudo nginx -t
+```
+
+### 6b. Install Certbot
+
+```bash
+sudo apt update
+sudo apt install -y certbot python3-certbot-nginx
+```
+
+### 6c. Obtain certificate
+
+```bash
+sudo certbot --nginx -d sendingmail.chetanchauhan.fun
+```
+
+Follow the prompts (email, agree to terms). Choose **redirect HTTP to HTTPS** when asked.
+
+Certbot updates `/etc/nginx/sites-available/mailflow` with SSL and auto-renewal.
+
+### 6d. Update app env for HTTPS
+
+```bash
+cd ~/repos/mailSender/Bulk-Mail-sender-inhouse   # your repo path
+nano .env
+```
+
+```env
+FRONTEND_URL=https://sendingmail.chetanchauhan.fun
+APP_PORT=8080
+```
+
+```bash
+sudo docker compose up -d
+```
+
+`FRONTEND_URL` must use `https://` or login/API will fail (CORS).
+
+### 6e. Verify
+
+```bash
+curl -s https://sendingmail.chetanchauhan.fun/api/health
+sudo certbot renew --dry-run
+```
+
+Open **https://sendingmail.chetanchauhan.fun** in the browser (padlock icon).
+
+### Certbot troubleshooting
+
+| Error | Fix |
+|-------|-----|
+| Connection refused on 443 | Open port 443 in EC2 security group |
+| DNS problem | `dig +short sendingmail.chetanchauhan.fun` must show your EC2 IP |
+| nginx test fails after certbot | `sudo nginx -t` — check for duplicate `server_name` |
+| Login works on HTTP but not HTTPS | Set `FRONTEND_URL=https://...` and restart backend |
 
 ## 7. Updates
 
@@ -114,9 +180,50 @@ docker compose logs -f backend
 docker compose logs -f frontend
 ```
 
+### `curl localhost/api/health` returns nginx 404 (Ubuntu)
+
+That means **host nginx** is on port 80, not the MailFlow container.
+
+Check what is listening:
+
+```bash
+sudo ss -tlnp | grep ':80'
+docker compose ps
+curl -s http://127.0.0.1:8080/api/health   # if APP_PORT=8080
+```
+
+**Fix A — EC2 dedicated to MailFlow (simplest):** stop host nginx, use Docker on 80
+
+```bash
+sudo systemctl stop nginx
+sudo systemctl disable nginx
+# In .env: APP_PORT=80
+docker compose up -d
+curl -s http://localhost/api/health
+```
+
+**Fix B — keep host nginx (recommended if nginx was already installed):**
+
+```bash
+# In .env
+APP_PORT=8080
+
+docker compose up -d --build
+curl -s http://127.0.0.1:8080/api/health   # should return {"status":"ok",...}
+
+sudo cp deploy/nginx-host.conf /etc/nginx/sites-available/mailflow
+sudo ln -sf /etc/nginx/sites-available/mailflow /etc/nginx/sites-enabled/mailflow
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+
+curl -s http://localhost/api/health
+curl -s http://sendingmail.chetanchauhan.fun/api/health
+```
+
 | Issue | Fix |
 |-------|-----|
 | Site not loading | Check DNS, security group port 80, `docker compose ps` |
+| `/api/health` 404 from Ubuntu nginx | Host nginx on :80 — use Fix A or B above |
 | Login fails / CORS | `FRONTEND_URL` must match browser URL (http vs https) |
 | API 502 | `docker compose logs backend` — wait for postgres/redis healthy |
 | Campaign progress stuck | Backend must stay running; check worker logs |
