@@ -46,32 +46,33 @@ export class CampaignService {
     return campaign;
   }
 
-  static async uploadRecipients(campaignId: string, file: Express.Multer.File, emailField: string) {
+  static async uploadRecipients(campaignId: string, file: Express.Multer.File, emailField?: string) {
+    const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
+    if (!campaign) throw new Error('Campaign not found');
+
     const parsed: ParsedData = CsvParserService.parse(file);
 
-    // Validate email field exists
-    if (!parsed.headers.includes(emailField)) {
-      throw new Error(`Email field "${emailField}" not found in file headers: ${parsed.headers.join(', ')}`);
+    const requiredVariables =
+      campaign.body || campaign.subject
+        ? CsvParserService.extractRequiredVariables(campaign.body || '', campaign.subject || '')
+        : [];
+
+    const validation = CsvParserService.validateSheet(parsed, {
+      requiredVariables: requiredVariables.length > 0 ? requiredVariables : undefined,
+      emailField,
+    });
+
+    if (!validation.valid || !validation.emailField) {
+      throw new Error(validation.errors.join(' '));
     }
 
-    // Validate emails
-    const invalidEmails = parsed.rows
-      .map((row, i) => ({ email: row[emailField], index: i }))
-      .filter(({ email }) => email && !CsvParserService.validateEmail(email));
-
-    if (invalidEmails.length > 0) {
-      throw new Error(`Invalid emails found in rows: ${invalidEmails.map(e => `Row ${e.index + 1}: ${e.email}`).join(', ')}`);
-    }
-
-    // Check for duplicates
-    const duplicates = CsvParserService.findDuplicates(parsed.rows, emailField);
-    if (duplicates.length > 0) {
-      throw new Error(`Duplicate emails found: ${duplicates.join(', ')}`);
-    }
+    const resolvedEmailField = validation.emailField;
 
     // Create recipients
     const recipients = await prisma.$transaction(
-      parsed.rows.map(row => {
+      parsed.rows
+        .filter(row => String(row[resolvedEmailField] || '').trim())
+        .map(row => {
         const variables: Record<string, string> = {};
         parsed.headers.forEach(h => {
           variables[h] = row[h] || '';
@@ -79,7 +80,7 @@ export class CampaignService {
         return prisma.campaignRecipient.create({
           data: {
             campaignId,
-            email: row[emailField].trim(),
+            email: String(row[resolvedEmailField]).trim(),
             variablesJson: JSON.stringify(variables),
             status: 'pending',
           },

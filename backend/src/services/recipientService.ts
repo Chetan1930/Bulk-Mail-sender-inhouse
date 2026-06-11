@@ -3,6 +3,49 @@ import { broadcastProgress } from './progressTracker';
 
 const prisma = new PrismaClient();
 
+export async function syncCampaignProgress(campaignId: string) {
+  const campaign = await prisma.campaign.findUnique({
+    where: { id: campaignId },
+    select: { status: true, totalRecipients: true },
+  });
+
+  if (!campaign) return;
+
+  const [sent, failed, pending] = await Promise.all([
+    prisma.campaignRecipient.count({ where: { campaignId, status: 'sent' } }),
+    prisma.campaignRecipient.count({ where: { campaignId, status: 'failed' } }),
+    prisma.campaignRecipient.count({ where: { campaignId, status: 'pending' } }),
+  ]);
+
+  let newStatus = campaign.status;
+
+  if (campaign.status === 'processing' && pending === 0) {
+    newStatus = 'completed';
+    await prisma.campaignLog.create({
+      data: {
+        campaignId,
+        message: `Campaign completed. Sent: ${sent}, Failed: ${failed}`,
+        level: failed > 0 ? 'warn' : 'info',
+      },
+    });
+  } else if (campaign.status === 'completed' && pending > 0) {
+    newStatus = 'processing';
+  }
+
+  await prisma.campaign.update({
+    where: { id: campaignId },
+    data: { sentCount: sent, failedCount: failed, status: newStatus },
+  });
+
+  broadcastProgress({
+    campaignId,
+    sentCount: sent,
+    failedCount: failed,
+    totalRecipients: campaign.totalRecipients,
+    status: newStatus,
+  });
+}
+
 export async function deliverRecipientEmail(
   recipientId: string,
   result: { success: boolean; messageId?: string; error?: string }
@@ -21,67 +64,32 @@ export async function deliverRecipientEmail(
       where: { id: recipientId },
       data: {
         status: 'sent',
-        response: result.messageId,
+        response: result.messageId || null,
+        errorMessage: null,
         sentAt: new Date(),
       },
     });
-    await prisma.campaign.update({
-      where: { id: campaignId },
-      data: { sentCount: { increment: 1 } },
-    });
   } else {
-    const newRetryCount = recipient.retryCount + 1;
-    const status = newRetryCount >= 3 ? 'failed' : 'retried';
+    const errorMessage = result.error || 'Unknown send error';
 
     await prisma.campaignRecipient.update({
       where: { id: recipientId },
       data: {
-        status,
-        retryCount: newRetryCount,
-        errorMessage: result.error,
+        status: 'failed',
+        errorMessage,
+        response: null,
+        sentAt: null,
       },
     });
 
-    if (status === 'failed') {
-      await prisma.campaign.update({
-        where: { id: campaignId },
-        data: { failedCount: { increment: 1 } },
-      });
-    }
+    await prisma.campaignLog.create({
+      data: {
+        campaignId,
+        message: `Failed to send to ${recipient.email}: ${errorMessage}`,
+        level: 'error',
+      },
+    });
   }
 
-  // Check campaign completion
-  const campaign = await prisma.campaign.findUnique({
-    where: { id: campaignId },
-    select: { sentCount: true, failedCount: true, totalRecipients: true, status: true },
-  });
-
-  let finalStatus = campaign?.status || 'processing';
-
-  if (campaign && campaign.status !== 'completed') {
-    const totalProcessed = campaign.sentCount + campaign.failedCount;
-    if (totalProcessed >= campaign.totalRecipients) {
-      await prisma.campaign.update({
-        where: { id: campaignId },
-        data: { status: 'completed' },
-      });
-      await prisma.campaignLog.create({
-        data: {
-          campaignId,
-          message: `Campaign completed. Sent: ${campaign.sentCount}, Failed: ${campaign.failedCount}`,
-          level: 'info',
-        },
-      });
-      finalStatus = 'completed';
-    }
-  }
-
-  // Broadcast progress via WebSocket with accurate final status
-  broadcastProgress({
-    campaignId,
-    sentCount: campaign?.sentCount || 0,
-    failedCount: campaign?.failedCount || 0,
-    totalRecipients: campaign?.totalRecipients || 0,
-    status: finalStatus,
-  });
+  await syncCampaignProgress(campaignId);
 }

@@ -69,7 +69,7 @@ router.post('/:id/upload', authenticate, upload.single('file'), async (req: Auth
       return;
     }
 
-    const emailField = req.body.emailField || 'Email';
+    const emailField = req.body.emailField || undefined;
     const result = await CampaignService.uploadRecipients(req.params.id, req.file, emailField);
     res.json(result);
   } catch (error: any) {
@@ -135,18 +135,40 @@ router.post('/parse-csv', authenticate, upload.single('file'), async (req: AuthR
     }
 
     const parsed = CsvParserService.parse(req.file);
+    const bodyMode = req.body.bodyMode || 'html';
 
-    // Validate template variables if template provided
-    let variableValidation = null;
-    if (req.body.template) {
-      variableValidation = CsvParserService.validateVariables(req.body.template, parsed.headers);
-    }
+    const requiredVariables =
+      bodyMode === 'html'
+        ? CsvParserService.extractRequiredVariables(
+            req.body.template || '',
+            req.body.subject || ''
+          )
+        : [];
+
+    const validation = CsvParserService.validateSheet(parsed, {
+      requiredVariables: requiredVariables.length > 0 ? requiredVariables : undefined,
+      emailField: req.body.emailField || undefined,
+    });
+
+    const columnCheck =
+      requiredVariables.length > 0
+        ? CsvParserService.validateRequiredColumns(requiredVariables, parsed.headers)
+        : null;
 
     res.json({
       headers: parsed.headers,
       preview: parsed.rows.slice(0, 5),
       totalRows: parsed.totalRows,
-      variableValidation,
+      emailField: validation.emailField,
+      variableValidation: columnCheck
+        ? {
+            missing: columnCheck.missing,
+            found: columnCheck.found,
+            allPresent: columnCheck.allPresent,
+            required: requiredVariables,
+          }
+        : null,
+      validation,
     });
   } catch (error: any) {
     res.status(400).json({ error: error.message });

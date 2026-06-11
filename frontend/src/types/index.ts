@@ -78,15 +78,30 @@ export interface DashboardStats {
   }>;
 }
 
+export interface SheetValidation {
+  missingColumns: string[];
+  foundColumns: string[];
+  requiredColumns: string[];
+  duplicateEmails: string[];
+  invalidEmails: Array<{ row: number; email: string }>;
+  emptyEmailRows: number[];
+  emailField: string | null;
+  valid: boolean;
+  errors: string[];
+}
+
 export interface CsvPreview {
   headers: string[];
   preview: Record<string, string>[];
   totalRows: number;
+  emailField: string | null;
   variableValidation: {
     missing: string[];
     found: string[];
     allPresent: boolean;
+    required: string[];
   } | null;
+  validation: SheetValidation;
 }
 
 export interface WsMessage {

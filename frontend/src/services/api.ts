@@ -87,10 +87,16 @@ export const api = {
       `/campaigns/${campaignId}/export-failed`
     ),
 
-  parseCsv: (file: File, template?: string) => {
+  parseCsv: (
+    file: File,
+    options?: { template?: string; subject?: string; bodyMode?: 'html' | 'template'; emailField?: string }
+  ) => {
     const formData = new FormData();
     formData.append('file', file);
-    if (template) formData.append('template', template);
+    if (options?.template) formData.append('template', options.template);
+    if (options?.subject) formData.append('subject', options.subject);
+    if (options?.bodyMode) formData.append('bodyMode', options.bodyMode);
+    if (options?.emailField) formData.append('emailField', options.emailField);
     return request<CsvPreview>('/campaigns/parse-csv', {
       method: 'POST',
       body: formData,

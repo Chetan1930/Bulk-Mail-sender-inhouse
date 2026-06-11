@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { EmailProvider, SendEmailOptions, SendEmailResult } from './baseProvider';
 import { SmtpConfig } from '../types';
+import { formatProviderError } from './errorUtils';
 
 export class SmtpProvider implements EmailProvider {
   name = 'smtp';
@@ -32,10 +33,10 @@ export class SmtpProvider implements EmailProvider {
         messageId: info.messageId,
         response: info.response,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message || 'SMTP send failed',
+        error: formatProviderError(error, 'SMTP'),
       };
     }
   }

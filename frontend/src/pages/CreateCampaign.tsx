@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { CsvPreview } from '../types';
@@ -28,12 +28,8 @@ const htmlTemplate = `<!DOCTYPE html>
 <head><meta charset="utf-8"></head>
 <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: #f8f9fa; border-radius: 8px; padding: 30px;">
-    <h1 style="color: #333;">Hi {{Name}},</h1>
-    <p style="color: #555; line-height: 1.6;">Welcome to {{Event}}!</p>
-    <p style="color: #555; line-height: 1.6;">Your exclusive coupon code is: <strong style="color: #4f46e5; font-size: 18px;">{{Coupon}}</strong></p>
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="#" style="background: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Redeem Now</a>
-    </div>
+    <p style="color: #555; line-height: 1.6;">Hello,</p>
+    <p style="color: #555; line-height: 1.6;">Your message here. Add placeholders matching your CSV column headers.</p>
   </div>
 </body>
 </html>`;
@@ -82,15 +78,28 @@ export default function CreateCampaign() {
     setFile(f);
     setError('');
     try {
-      const preview = await api.parseCsv(f, form.body);
+      const preview = await api.parseCsv(f, {
+        template: bodyMode === 'html' ? form.body : '',
+        subject: bodyMode === 'html' ? form.subject : '',
+        bodyMode,
+      });
       setCsvPreview(preview);
-      if (preview.variableValidation && !preview.variableValidation.allPresent) {
-        setError(`Missing CSV headers: ${preview.variableValidation.missing.join(', ')}`);
+      if (!preview.validation.valid) {
+        setError(preview.validation.errors.join(' '));
       }
     } catch (err: any) {
       setError(err.message);
+      setCsvPreview(null);
     }
   };
+
+  useEffect(() => {
+    if (step === 2 && file) {
+      processFile(file);
+    }
+    // Re-validate when template/subject changes on the recipients step
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, form.body, form.subject, bodyMode]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -134,12 +143,10 @@ export default function CreateCampaign() {
       setCampaignId(campaign.id);
 
       if (file && campaign.id) {
-        const emailField =
-          csvPreview?.headers.includes('Email')
-            ? 'Email'
-            : csvPreview?.headers.find(h => h.toLowerCase().includes('email')) ||
-              csvPreview?.headers[0] ||
-              'Email';
+        if (csvPreview && !csvPreview.validation.valid) {
+          throw new Error(csvPreview.validation.errors.join(' '));
+        }
+        const emailField = csvPreview?.emailField || csvPreview?.validation.emailField || undefined;
         const upload = await api.uploadRecipients(campaign.id, file, emailField);
         setUploadResult(upload);
       }
@@ -166,9 +173,11 @@ export default function CreateCampaign() {
   const renderPreview = () => {
     if (!csvPreview?.preview?.[0]) return form.body;
     let html = form.body;
-    Object.entries(csvPreview.preview[0]).forEach(([key, value]) => {
-      html = html.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), value);
-    });
+    const row = csvPreview.preview[0];
+    for (const header of csvPreview.headers) {
+      const value = row[header] || '';
+      html = html.replace(new RegExp(`\\{\\{${header}\\}\\}`, 'gi'), value);
+    }
     return html;
   };
 
@@ -410,9 +419,31 @@ export default function CreateCampaign() {
             {csvPreview && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <CheckCircle className="w-4 h-4" />
-                  <span><strong>{csvPreview.totalRows.toLocaleString()}</strong> rows — {csvPreview.headers.join(', ')}</span>
+                  {csvPreview.validation.valid
+                    ? <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    : <AlertCircle className="w-4 h-4 text-amber-500" />}
+                  <span>
+                    <strong>{csvPreview.totalRows.toLocaleString()}</strong> rows
+                    {csvPreview.emailField && <> — email column: <strong>{csvPreview.emailField}</strong></>}
+                  </span>
                 </div>
+
+                {csvPreview.variableValidation && csvPreview.variableValidation.required.length > 0 && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Template requires: {csvPreview.variableValidation.required.join(', ')}
+                    {csvPreview.variableValidation.allPresent && (
+                      <span className="text-emerald-600 dark:text-emerald-400 ml-1">— all present</span>
+                    )}
+                  </div>
+                )}
+
+                {csvPreview.validation.errors.length > 0 && (
+                  <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1 list-disc list-inside">
+                    {csvPreview.validation.errors.map((msg) => (
+                      <li key={msg}>{msg}</li>
+                    ))}
+                  </ul>
+                )}
 
                 {csvPreview.preview.length > 0 && (
                   <div className="table-wrap border border-gray-200 dark:border-gray-700 rounded-lg">
@@ -442,7 +473,11 @@ export default function CreateCampaign() {
 
             <div className="flex justify-between pt-2">
               <button onClick={() => setStep(1)} className="btn-ghost"><ChevronLeft className="w-4 h-4" /> Back</button>
-              <button onClick={handleCreateCampaign} disabled={sending || !file} className="btn-primary">
+              <button
+                onClick={handleCreateCampaign}
+                disabled={sending || !file || !csvPreview?.validation.valid}
+                className="btn-primary"
+              >
                 {sending ? 'Creating...' : <>Review <ChevronRight className="w-4 h-4" /></>}
               </button>
             </div>

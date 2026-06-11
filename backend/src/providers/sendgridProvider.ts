@@ -1,5 +1,6 @@
 import sgMail from '@sendgrid/mail';
 import { EmailProvider, SendEmailOptions, SendEmailResult } from './baseProvider';
+import { formatProviderError } from './errorUtils';
 
 export class SendGridProvider implements EmailProvider {
   name = 'sendgrid';
@@ -29,10 +30,10 @@ export class SendGridProvider implements EmailProvider {
         messageId: response.headers['x-message-id'] as string,
         response: `Status: ${response.statusCode}`,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       return {
         success: false,
-        error: error.message || 'SendGrid send failed',
+        error: formatProviderError(error, 'SendGrid'),
       };
     }
   }
