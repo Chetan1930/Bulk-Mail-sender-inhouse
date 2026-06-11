@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { DashboardStats } from '../types';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import PageHeader from '../components/PageHeader';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -23,12 +24,27 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    api.getDashboardStats()
-      .then(setStats)
-      .catch((err: any) => setError(err.message))
-      .finally(() => setLoading(false));
+  const loadStats = useCallback(async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      setStats(await api.getDashboardStats());
+      setError('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  const hasActiveCampaigns =
+    (stats?.activeCampaigns ?? 0) > 0 ||
+    stats?.recentCampaigns.some((c) => c.status === 'processing') === true;
+
+  useAutoRefresh(() => loadStats(true), hasActiveCampaigns, 5000);
 
   if (loading) {
     return (

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { CampaignLog } from '../types';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { ArrowLeft } from 'lucide-react';
 
 type FilterLevel = 'all' | 'info' | 'warn' | 'error';
@@ -19,17 +20,33 @@ export default function CampaignLogs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<FilterLevel>('all');
+  const [isSending, setIsSending] = useState(false);
+
+  const loadLogs = useCallback(async (silent = false) => {
+    if (!id) return;
+    try {
+      if (!silent) setLoading(true);
+      const campaign = await api.getCampaign(id);
+      setCampaignName(campaign.name);
+      setLogs(campaign.logs || []);
+      const pending =
+        campaign.status === 'processing' ||
+        (campaign.totalRecipients > 0 &&
+          campaign.sentCount + campaign.failedCount < campaign.totalRecipients);
+      setIsSending(pending);
+      setError('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    if (!id) return;
-    api.getCampaign(id)
-      .then((campaign) => {
-        setCampaignName(campaign.name);
-        setLogs(campaign.logs || []);
-      })
-      .catch((err: any) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [id]);
+    loadLogs();
+  }, [loadLogs]);
+
+  useAutoRefresh(() => loadLogs(true), isSending, 3000);
 
   const filteredLogs = filter === 'all' ? logs : logs.filter(l => l.level === filter);
 

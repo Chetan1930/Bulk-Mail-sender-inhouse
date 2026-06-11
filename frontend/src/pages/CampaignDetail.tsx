@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Campaign, WsMessage } from '../types';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import { ArrowLeft, Send, FileText, Download, Copy, RotateCcw } from 'lucide-react';
 
 const statusBadge: Record<string, string> = {
@@ -30,18 +31,27 @@ export default function CampaignDetail() {
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retryingAll, setRetryingAll] = useState(false);
 
-  const loadCampaign = useCallback(async () => {
+  const loadCampaign = useCallback(async (silent = false) => {
     if (!id) return;
     try {
+      if (!silent) setLoading(true);
       setCampaign(await api.getCampaign(id));
     } catch (err: any) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [id]);
 
   useEffect(() => { loadCampaign(); }, [loadCampaign]);
+
+  const isSending =
+    campaign?.status === 'processing' ||
+    (campaign != null &&
+      campaign.totalRecipients > 0 &&
+      campaign.sentCount + campaign.failedCount < campaign.totalRecipients);
+
+  useAutoRefresh(() => loadCampaign(true), isSending, 3000);
 
   useEffect(() => {
     if (!id || campaign?.status !== 'processing') return;
@@ -173,6 +183,9 @@ export default function CampaignDetail() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100 truncate">{campaign.name}</h1>
               <span className={statusBadge[campaign.status] || 'badge-gray'}>{campaign.status}</span>
+              {isSending && (
+                <span className="badge-info animate-pulse">Live</span>
+              )}
             </div>
             <p className="text-sm text-slate-500 mt-0.5">{new Date(campaign.createdAt).toLocaleDateString()}</p>
           </div>
