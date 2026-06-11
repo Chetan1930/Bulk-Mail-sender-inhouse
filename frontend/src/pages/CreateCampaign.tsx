@@ -23,21 +23,6 @@ interface CampaignForm {
   smtpPass: string;
 }
 
-const defaultForm: CampaignForm = {
-  name: '',
-  subject: '',
-  body: htmlTemplate,
-  provider: 'sendgrid',
-  senderEmail: '',
-  senderName: '',
-  templateId: '',
-  sendgridApiKey: '',
-  smtpHost: '',
-  smtpPort: '587',
-  smtpUser: '',
-  smtpPass: '',
-};
-
 const htmlTemplate = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -52,6 +37,21 @@ const htmlTemplate = `<!DOCTYPE html>
   </div>
 </body>
 </html>`;
+
+const defaultForm: CampaignForm = {
+  name: '',
+  subject: '',
+  body: htmlTemplate,
+  provider: 'sendgrid',
+  senderEmail: '',
+  senderName: '',
+  templateId: '',
+  sendgridApiKey: '',
+  smtpHost: '',
+  smtpPort: '587',
+  smtpUser: '',
+  smtpPass: '',
+};
 
 const steps = [
   { label: 'Details', desc: 'Campaign info & content', icon: Settings },
