@@ -63,10 +63,10 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  uploadRecipients: (campaignId: string, file: File, emailField: string) => {
+  uploadRecipients: (campaignId: string, file: File, emailField?: string) => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('emailField', emailField);
+    if (emailField) formData.append('emailField', emailField);
     return request<{ totalRecipients: number; headers: string[]; preview: Record<string, string> | null }>(
       `/campaigns/${campaignId}/upload`,
       {
