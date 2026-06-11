@@ -134,6 +134,7 @@ export class CampaignService {
         senderName: campaign.senderName,
         smtpConfig: campaign.smtpConfig,
         sendgridApiKey: campaign.sendgridApiKey,
+        templateId: campaign.templateId,
       },
     };
   }
