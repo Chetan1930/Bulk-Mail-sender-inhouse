@@ -44,7 +44,7 @@ npm install
 cp .env.example .env  # Edit if needed
 npx prisma generate
 npx prisma db push
-npm run prisma:seed    # Creates demo users
+npm run prisma:seed    # Creates admin user (set SEED_ADMIN_* in .env)
 npm run dev            # Starts on http://localhost:3001
 ```
 
@@ -58,10 +58,7 @@ npm run dev  # Starts on http://localhost:5173
 
 ### 4. Login
 
-Open http://localhost:5173 and login with:
-
-- **Admin**: admin@mailflow.com / admin123
-- **Manager**: manager@mailflow.com / manager123
+Open http://localhost:5173 and sign in with the admin credentials set in `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`.
 
 ## Project Structure
 
@@ -103,16 +100,13 @@ For **EC2 + custom domain** (e.g. `http://sendingmail.chetanchauhan.fun`), see *
 
 Open **http://localhost** (or the port set via `APP_PORT` in `.env`, default `80`).
 
-Default login (when `SEED_ON_START=true`):
-
-- **Admin**: admin@mailflow.com / admin123
-- **Manager**: manager@mailflow.com / manager123
+Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.env` before first deploy.
 
 ### Production checklist
 
 1. Set a strong `JWT_SECRET` in `.env`
 2. Set `FRONTEND_URL` to your public URL (e.g. `https://mail.yourcompany.com`)
-3. Set `SEED_ON_START=false` after first deploy
+3. Set `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, then `SEED_ON_START=false` after first deploy
 4. Configure `SENDGRID_API_KEY` or SMTP settings in `.env`
 5. Put a reverse proxy with TLS (Caddy, Nginx, Traefik) in front for public access
 

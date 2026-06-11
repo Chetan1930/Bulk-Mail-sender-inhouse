@@ -3,42 +3,45 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+const DEMO_EMAILS = ['admin@mailflow.com', 'manager@mailflow.com'];
+
 async function main() {
   console.log('Seeding database...');
 
-  // Create admin user
-  const adminEmail = 'admin@mailflow.com';
-  const adminPassword = await bcrypt.hash('admin123', 12);
+  const email = process.env.SEED_ADMIN_EMAIL;
+  const password = process.env.SEED_ADMIN_PASSWORD;
+  const name = process.env.SEED_ADMIN_NAME || 'Admin';
+
+  if (!email || !password) {
+    console.error('SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD are required');
+    process.exit(1);
+  }
+
+  const removed = await prisma.user.deleteMany({
+    where: { email: { in: DEMO_EMAILS } },
+  });
+  if (removed.count > 0) {
+    console.log(`Removed ${removed.count} demo user(s)`);
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 12);
 
   const admin = await prisma.user.upsert({
-    where: { email: adminEmail },
-    update: {},
+    where: { email },
+    update: {
+      password: hashedPassword,
+      name,
+      role: 'admin',
+    },
     create: {
-      email: adminEmail,
-      password: adminPassword,
-      name: 'Admin',
+      email,
+      password: hashedPassword,
+      name,
       role: 'admin',
     },
   });
 
-  console.log(`Admin user created: ${admin.email} / admin123`);
-
-  // Create manager user
-  const managerEmail = 'manager@mailflow.com';
-  const managerPassword = await bcrypt.hash('manager123', 12);
-
-  const manager = await prisma.user.upsert({
-    where: { email: managerEmail },
-    update: {},
-    create: {
-      email: managerEmail,
-      password: managerPassword,
-      name: 'Manager',
-      role: 'manager',
-    },
-  });
-
-  console.log(`Manager user created: ${manager.email} / manager123`);
+  console.log(`Admin user ready: ${admin.email}`);
   console.log('Seeding complete!');
 }
 

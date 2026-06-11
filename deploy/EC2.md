@@ -86,11 +86,7 @@ curl -s http://localhost/api/health
 
 Open **http://sendingmail.chetanchauhan.fun** in your browser.
 
-Default login (when `SEED_ON_START=true`):
-
-- `admin@mailflow.com` / `admin123`
-
-Then set `SEED_ON_START=false` in `.env` and run `docker compose up -d`.
+Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.env`, then set `SEED_ON_START=false` after first login and run `docker compose up -d`.
 
 ## 6. HTTPS with Certbot (nginx already on port 80)
 

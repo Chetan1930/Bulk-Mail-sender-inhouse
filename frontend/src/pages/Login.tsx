@@ -67,10 +67,6 @@ export default function Login() {
             </button>
           </form>
         </div>
-
-        <p className="mt-5 text-xs text-slate-400 text-center">
-          Demo: admin@mailflow.com / admin123
-        </p>
       </div>
     </div>
   );
