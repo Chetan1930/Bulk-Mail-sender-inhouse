@@ -33,7 +33,7 @@ export default function Login() {
           <p className="mt-1 text-sm text-slate-500">Sign in to your account</p>
         </div>
 
-        <div className="card p-6 shadow-card">
+        <div className="card p-6">
           {error && <div className="alert-error mb-5">{error}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">

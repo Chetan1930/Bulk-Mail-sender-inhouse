@@ -25,7 +25,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-60 flex flex-col bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 transform transition-transform lg:relative lg:translate-x-0 lg:flex-shrink-0 ${
-          open ? 'translate-x-0 shadow-card' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
+          open ? 'translate-x-0 shadow-lg' : '-translate-x-full lg:translate-x-0 lg:shadow-none'
         }`}
       >
         <div className="flex items-center justify-between h-14 px-5 border-b border-slate-100 dark:border-slate-800">
