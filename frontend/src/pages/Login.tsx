@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Mail } from 'lucide-react';
 
 export default function Login() {
   const { login } = useAuth();
@@ -22,43 +23,53 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-white dark:bg-gray-950">
-      <div className="w-full max-w-xs">
-        <h1 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">MailFlow</h1>
-
-        {error && <p className="alert-error mb-4">{error}</p>}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="label" htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              className="input"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoFocus
-            />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-slate-100 dark:bg-slate-900">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-teal-600 mb-4">
+            <Mail className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <label className="label" htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <button type="submit" disabled={loading} className="btn-primary w-full">
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+          <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">MailFlow</h1>
+          <p className="mt-1 text-sm text-slate-500">Sign in to your account</p>
+        </div>
 
-        <p className="mt-6 text-xs text-gray-400">
-          admin@mailflow.com / admin123
+        <div className="card p-6 shadow-card">
+          {error && <div className="alert-error mb-5">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="label" htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                className="input"
+                placeholder="you@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                className="input"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 mt-1">
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+        </div>
+
+        <p className="mt-5 text-xs text-slate-400 text-center">
+          Demo: admin@mailflow.com / admin123
         </p>
       </div>
     </div>

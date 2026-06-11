@@ -187,10 +187,10 @@ export default function CreateCampaign() {
           const isDone = step > num;
           return (
             <div key={label} className="flex items-center gap-2">
-              {i > 0 && <div className={`h-px w-8 ${isDone || isActive ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-200 dark:bg-gray-800'}`} />}
-              <div className={`flex items-center gap-2 text-sm ${isActive ? 'font-medium' : 'text-gray-400'}`}>
+              {i > 0 && <div className={`h-px w-8 ${isDone || isActive ? 'bg-teal-500' : 'bg-slate-200 dark:bg-slate-700'}`} />}
+              <div className={`flex items-center gap-2 text-sm ${isActive ? 'text-teal-700 dark:text-teal-300 font-medium' : isDone ? 'text-slate-600 dark:text-slate-300' : 'text-slate-400'}`}>
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                  isDone ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' : isActive ? 'border border-gray-900 dark:border-gray-100' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                  isDone ? 'bg-teal-500 text-white' : isActive ? 'bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 ring-2 ring-teal-500/30' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
                 }`}>
                   {isDone ? <CheckCircle className="w-3.5 h-3.5" /> : num}
                 </span>
@@ -229,8 +229,8 @@ export default function CreateCampaign() {
                       onClick={() => switchProvider(p)}
                       className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
                         form.provider === p
-                          ? 'border-gray-900 dark:border-gray-100 bg-gray-100 dark:bg-gray-800'
-                          : 'border-gray-200 dark:border-gray-700 text-gray-500'
+                          ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300'
+                          : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-slate-300'
                       }`}
                     >
                       {p === 'sendgrid' ? <Mail className="w-3.5 h-3.5" /> : <Server className="w-3.5 h-3.5" />}
@@ -293,8 +293,8 @@ export default function CreateCampaign() {
                   onClick={() => setBodyMode('html')}
                   className={`flex items-center gap-2 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
                     bodyMode === 'html'
-                      ? 'border-gray-900 dark:border-gray-100 bg-gray-100 dark:bg-gray-800'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-500'
+                      ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300'
+                      : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-slate-300'
                   }`}
                 >
                   <Code className="w-3.5 h-3.5" />
@@ -306,8 +306,8 @@ export default function CreateCampaign() {
                     onClick={() => setBodyMode('template')}
                     className={`flex items-center gap-2 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
                       bodyMode === 'template'
-                        ? 'border-gray-900 dark:border-gray-100 bg-gray-100 dark:bg-gray-800'
-                        : 'border-gray-200 dark:border-gray-700 text-gray-500'
+                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300'
+                        : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-slate-300'
                     }`}
                   >
                     <Hash className="w-3.5 h-3.5" />
@@ -380,9 +380,9 @@ export default function CreateCampaign() {
           <div className="card-body space-y-5">
             <div
               className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
-                dragging ? 'border-gray-900 dark:border-gray-100 bg-gray-50 dark:bg-gray-900' :
-                file ? 'border-gray-400 bg-gray-50 dark:bg-gray-900' :
-                'border-gray-200 dark:border-gray-700'
+                dragging ? 'border-teal-400 bg-teal-50/50 dark:bg-teal-950/20' :
+                file ? 'border-emerald-300 bg-emerald-50/30 dark:bg-emerald-950/20' :
+                'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
               }`}
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}

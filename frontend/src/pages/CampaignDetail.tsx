@@ -4,6 +4,21 @@ import { api } from '../services/api';
 import { Campaign, WsMessage } from '../types';
 import { ArrowLeft, Send, FileText, Download, Copy } from 'lucide-react';
 
+const statusBadge: Record<string, string> = {
+  draft: 'badge-gray',
+  processing: 'badge-info',
+  completed: 'badge-success',
+  failed: 'badge-danger',
+  paused: 'badge-warning',
+};
+
+const recipientBadge: Record<string, string> = {
+  pending: 'badge-warning',
+  sent: 'badge-success',
+  failed: 'badge-danger',
+  retried: 'badge-info',
+};
+
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -121,15 +136,15 @@ export default function CampaignDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-800">
+      <div className="flex items-start justify-between gap-4 pb-6 mb-2 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-start gap-3 min-w-0">
-          <Link to="/" className="mt-0.5 text-gray-400 hover:text-gray-600"><ArrowLeft className="w-5 h-5" /></Link>
+          <Link to="/" className="mt-0.5 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"><ArrowLeft className="w-5 h-5" /></Link>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-medium truncate">{campaign.name}</h1>
-              <span className="badge">{campaign.status}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100 truncate">{campaign.name}</h1>
+              <span className={statusBadge[campaign.status] || 'badge-gray'}>{campaign.status}</span>
             </div>
-            <p className="text-sm text-gray-500 mt-0.5">{new Date(campaign.createdAt).toLocaleDateString()}</p>
+            <p className="text-sm text-slate-500 mt-0.5">{new Date(campaign.createdAt).toLocaleDateString()}</p>
           </div>
         </div>
         <div className="flex gap-2 flex-shrink-0">
@@ -153,16 +168,16 @@ export default function CampaignDetail() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((s) => (
           <div key={s.label} className="stat-card">
-            <p className="text-xs text-gray-500">{s.label}</p>
-            <p className="text-xl font-medium tabular-nums mt-1">{s.value.toLocaleString()}</p>
+            <p className="text-xs font-medium text-slate-400">{s.label}</p>
+            <p className="text-2xl font-semibold text-slate-800 dark:text-slate-100 tabular-nums mt-1">{s.value.toLocaleString()}</p>
           </div>
         ))}
       </div>
 
       <div className="card p-4">
         <div className="flex justify-between text-sm mb-2">
-          <span className="text-gray-500">{processed.toLocaleString()} / {campaign.totalRecipients.toLocaleString()}</span>
-          <span className="tabular-nums">{progress}%</span>
+          <span className="text-slate-500">{processed.toLocaleString()} / {campaign.totalRecipients.toLocaleString()}</span>
+          <span className="font-medium text-slate-700 dark:text-slate-200 tabular-nums">{progress}%</span>
         </div>
         <div className="progress-bar">
           <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
@@ -173,9 +188,9 @@ export default function CampaignDetail() {
         <div className="card">
           <div className="card-header"><h3 className="text-sm font-medium">Info</h3></div>
           <div className="card-body space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-gray-500">Subject</span><span className="truncate ml-4">{campaign.subject}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">Provider</span><span>{campaign.provider}</span></div>
-            <div className="flex justify-between"><span className="text-gray-500">From</span><span>{campaign.senderEmail}</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">Subject</span><span className="truncate ml-4">{campaign.subject}</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">Provider</span><span>{campaign.provider}</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">From</span><span>{campaign.senderEmail}</span></div>
           </div>
         </div>
         <div className="card">
@@ -202,10 +217,10 @@ export default function CampaignDetail() {
                 {campaign.recipients.map((r) => (
                   <tr key={r.id}>
                     <td>{r.email}</td>
-                    <td><span className="badge">{r.status}</span></td>
-                    <td className="tabular-nums">{r.retryCount}</td>
-                    <td className="max-w-[160px] truncate text-gray-500">{r.response || r.errorMessage || '—'}</td>
-                    <td className="text-gray-500 tabular-nums">{r.sentAt ? new Date(r.sentAt).toLocaleString() : '—'}</td>
+                    <td><span className={recipientBadge[r.status] || 'badge-gray'}>{r.status}</span></td>
+                    <td className="tabular-nums text-slate-500">{r.retryCount}</td>
+                    <td className="max-w-[160px] truncate text-slate-400">{r.response || r.errorMessage || '—'}</td>
+                    <td className="text-slate-400 tabular-nums">{r.sentAt ? new Date(r.sentAt).toLocaleString() : '—'}</td>
                   </tr>
                 ))}
               </tbody>

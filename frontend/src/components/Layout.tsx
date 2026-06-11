@@ -12,11 +12,11 @@ export default function Layout() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-gray-950">
+    <div className="min-h-screen flex bg-slate-100 dark:bg-slate-900">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-6 lg:p-8 overflow-auto">
           <div key={location.pathname} className="max-w-5xl mx-auto w-full">
             <Outlet />
           </div>

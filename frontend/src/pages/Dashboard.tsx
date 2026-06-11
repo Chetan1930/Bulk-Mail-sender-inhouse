@@ -8,7 +8,15 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts';
 
-const CHART_COLORS = ['#111827', '#9ca3af'];
+const CHART_COLORS = ['#2dd4bf', '#fda4af'];
+
+const statusBadge: Record<string, string> = {
+  draft: 'badge-gray',
+  processing: 'badge-info',
+  completed: 'badge-success',
+  failed: 'badge-danger',
+  paused: 'badge-warning',
+};
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -55,23 +63,24 @@ export default function Dashboard() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
+        description="Overview of your campaigns and delivery"
         action={<Link to="/campaigns/new" className="btn-primary">New campaign</Link>}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((s) => (
           <div key={s.label} className="stat-card">
-            <p className="text-xs text-gray-500">{s.label}</p>
-            <p className="text-xl font-medium tabular-nums mt-1">{s.value.toLocaleString()}</p>
+            <p className="text-xs font-medium text-slate-400">{s.label}</p>
+            <p className="text-2xl font-semibold text-slate-800 dark:text-slate-100 tabular-nums mt-1">{s.value.toLocaleString()}</p>
           </div>
         ))}
       </div>
 
       {total > 0 && (
-        <div className="card p-4">
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-gray-500">Delivery rate</span>
-            <span className="tabular-nums">{successRate}%</span>
+        <div className="card p-5">
+          <div className="flex justify-between text-sm mb-3">
+            <span className="text-slate-500">Delivery rate</span>
+            <span className="font-medium text-slate-700 dark:text-slate-200 tabular-nums">{successRate}%</span>
           </div>
           <div className="progress-bar">
             <div className="progress-bar-fill" style={{ width: `${successRate}%` }} />
@@ -81,11 +90,11 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="card">
-          <div className="card-header"><h3 className="text-sm font-medium">Distribution</h3></div>
-          <div className="card-body h-48">
+          <div className="card-header"><h3 className="text-sm font-medium text-slate-700 dark:text-slate-200">Distribution</h3></div>
+          <div className="card-body h-52">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} barSize={40}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <BarChart data={chartData} barSize={48}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip />
@@ -98,8 +107,8 @@ export default function Dashboard() {
         </div>
 
         <div className="card">
-          <div className="card-header"><h3 className="text-sm font-medium">Sent vs failed</h3></div>
-          <div className="card-body h-48">
+          <div className="card-header"><h3 className="text-sm font-medium text-slate-700 dark:text-slate-200">Sent vs failed</h3></div>
+          <div className="card-body h-52">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={chartData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value">
@@ -113,7 +122,7 @@ export default function Dashboard() {
       </div>
 
       <div className="card">
-        <div className="card-header"><h3 className="text-sm font-medium">Recent campaigns</h3></div>
+        <div className="card-header"><h3 className="text-sm font-medium text-slate-700 dark:text-slate-200">Recent campaigns</h3></div>
         <div className="table-wrap">
           {stats && stats.recentCampaigns.length > 0 ? (
             <table>
@@ -130,13 +139,13 @@ export default function Dashboard() {
               <tbody>
                 {stats.recentCampaigns.map((c) => (
                   <tr key={c.id}>
-                    <td>{c.name}</td>
-                    <td><span className="badge">{c.status}</span></td>
+                    <td className="font-medium text-slate-700 dark:text-slate-200">{c.name}</td>
+                    <td><span className={statusBadge[c.status] || 'badge-gray'}>{c.status}</span></td>
                     <td className="text-right tabular-nums">{c.totalRecipients.toLocaleString()}</td>
-                    <td className="text-right tabular-nums">{c.sentCount.toLocaleString()}</td>
-                    <td className="text-right tabular-nums">{c.failedCount.toLocaleString()}</td>
+                    <td className="text-right tabular-nums text-emerald-600 dark:text-emerald-400">{c.sentCount.toLocaleString()}</td>
+                    <td className="text-right tabular-nums text-rose-500 dark:text-rose-400">{c.failedCount.toLocaleString()}</td>
                     <td className="text-right">
-                      <Link to={`/campaigns/${c.id}`} className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100">View</Link>
+                      <Link to={`/campaigns/${c.id}`} className="text-xs font-medium text-teal-600 dark:text-teal-400 hover:text-teal-700">View</Link>
                     </td>
                   </tr>
                 ))}
