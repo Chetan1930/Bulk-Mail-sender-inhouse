@@ -87,6 +87,16 @@ export const api = {
       `/campaigns/${campaignId}/export-failed`
     ),
 
+  retryRecipient: (campaignId: string, recipientId: string) =>
+    request<{ queued: number }>(`/campaigns/${campaignId}/recipients/${recipientId}/retry`, {
+      method: 'POST',
+    }),
+
+  retryFailedRecipients: (campaignId: string) =>
+    request<{ queued: number }>(`/campaigns/${campaignId}/retry-failed`, {
+      method: 'POST',
+    }),
+
   parseCsv: (
     file: File,
     options?: { template?: string; subject?: string; bodyMode?: 'html' | 'template'; emailField?: string }

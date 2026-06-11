@@ -1,7 +1,39 @@
 import { PrismaClient } from '@prisma/client';
 import { CsvParserService, ParsedData } from './csvParser';
+import { EmailJobData, queueRecipientEmail } from '../workers/queue';
+import { syncCampaignProgress } from './recipientService';
 
 const prisma = new PrismaClient();
+
+function buildEmailJob(
+  campaignId: string,
+  recipient: { id: string; email: string; variablesJson: string },
+  campaign: {
+    subject: string;
+    body: string;
+    provider: string;
+    senderEmail: string;
+    senderName: string;
+    smtpConfig: unknown;
+    sendgridApiKey: string | null;
+    templateId: string | null;
+  }
+): EmailJobData {
+  return {
+    campaignId,
+    recipientId: recipient.id,
+    email: recipient.email,
+    subject: campaign.subject,
+    body: campaign.body,
+    variablesJson: recipient.variablesJson,
+    provider: campaign.provider,
+    senderEmail: campaign.senderEmail,
+    senderName: campaign.senderName,
+    smtpConfig: campaign.smtpConfig,
+    sendgridApiKey: campaign.sendgridApiKey || undefined,
+    templateId: campaign.templateId || undefined,
+  };
+}
 
 export class CampaignService {
   static async create(data: {
@@ -213,7 +245,7 @@ export class CampaignService {
 
   static async exportFailedEmails(campaignId: string) {
     const failed = await prisma.campaignRecipient.findMany({
-      where: { campaignId, status: 'failed' },
+      where: { campaignId, status: { in: ['failed', 'retried'] } },
       select: { email: true, errorMessage: true, retryCount: true, createdAt: true },
     });
     return failed;
@@ -242,5 +274,94 @@ export class CampaignService {
     });
 
     return newCampaign;
+  }
+
+  static async retryRecipient(campaignId: string, recipientId: string) {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { recipients: { where: { id: recipientId } } },
+    });
+
+    if (!campaign) throw new Error('Campaign not found');
+
+    const recipient = campaign.recipients[0];
+    if (!recipient) throw new Error('Recipient not found');
+    if (recipient.status !== 'failed' && recipient.status !== 'retried') {
+      throw new Error('Only failed recipients can be retried');
+    }
+
+    await prisma.campaignRecipient.update({
+      where: { id: recipientId },
+      data: {
+        status: 'pending',
+        errorMessage: null,
+        retryCount: { increment: 1 },
+      },
+    });
+
+    if (campaign.status !== 'processing') {
+      await prisma.campaign.update({
+        where: { id: campaignId },
+        data: { status: 'processing' },
+      });
+    }
+
+    await queueRecipientEmail(buildEmailJob(campaignId, recipient, campaign));
+
+    await prisma.campaignLog.create({
+      data: {
+        campaignId,
+        message: `Manual retry queued for ${recipient.email}`,
+        level: 'info',
+      },
+    });
+
+    await syncCampaignProgress(campaignId);
+
+    return { queued: 1 };
+  }
+
+  static async retryFailedRecipients(campaignId: string) {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: { recipients: { where: { status: { in: ['failed', 'retried'] } } } },
+    });
+
+    if (!campaign) throw new Error('Campaign not found');
+    if (campaign.recipients.length === 0) {
+      throw new Error('No failed recipients to retry');
+    }
+
+    if (campaign.status !== 'processing') {
+      await prisma.campaign.update({
+        where: { id: campaignId },
+        data: { status: 'processing' },
+      });
+    }
+
+    for (const recipient of campaign.recipients) {
+      await prisma.campaignRecipient.update({
+        where: { id: recipient.id },
+        data: {
+          status: 'pending',
+          errorMessage: null,
+          retryCount: { increment: 1 },
+        },
+      });
+
+      await queueRecipientEmail(buildEmailJob(campaignId, recipient, campaign));
+    }
+
+    await prisma.campaignLog.create({
+      data: {
+        campaignId,
+        message: `Manual retry queued for ${campaign.recipients.length} failed recipient(s)`,
+        level: 'info',
+      },
+    });
+
+    await syncCampaignProgress(campaignId);
+
+    return { queued: campaign.recipients.length };
   }
 }

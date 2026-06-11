@@ -5,7 +5,7 @@ import { authenticate } from '../middleware/auth';
 import { campaignLimiter } from '../middleware/rateLimiter';
 import { AuthRequest } from '../types';
 import { CsvParserService } from '../services/csvParser';
-import { emailQueue } from '../workers/queue';
+import { queueRecipientEmail } from '../workers/queue';
 
 const router = Router();
 const upload = multer({
@@ -82,9 +82,8 @@ router.post('/:id/start', authenticate, async (req: AuthRequest, res: Response) 
   try {
     const { recipients, campaign } = await CampaignService.startCampaign(req.params.id);
 
-    // Queue all recipients with campaign data
     for (const recipient of recipients) {
-      await emailQueue.add('send-email', {
+      await queueRecipientEmail({
         campaignId: req.params.id,
         recipientId: recipient.id,
         email: recipient.email,
@@ -95,7 +94,7 @@ router.post('/:id/start', authenticate, async (req: AuthRequest, res: Response) 
         senderEmail: campaign.senderEmail,
         senderName: campaign.senderName,
         smtpConfig: campaign.smtpConfig,
-        sendgridApiKey: campaign.sendgridApiKey,
+        sendgridApiKey: campaign.sendgridApiKey || undefined,
         templateId: campaign.templateId || undefined,
       });
     }
@@ -111,6 +110,38 @@ router.post('/:id/duplicate', authenticate, async (req: AuthRequest, res: Respon
   try {
     const campaign = await CampaignService.duplicateCampaign(req.params.id, req.user!.id);
     res.status(201).json(campaign);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Retry a single failed recipient
+router.post('/:id/recipients/:recipientId/retry', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const campaign = await CampaignService.getCampaign(req.params.id);
+    if (campaign.userId !== req.user!.id && req.user!.role !== 'admin') {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+
+    const result = await CampaignService.retryRecipient(req.params.id, req.params.recipientId);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Retry all failed recipients
+router.post('/:id/retry-failed', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const campaign = await CampaignService.getCampaign(req.params.id);
+    if (campaign.userId !== req.user!.id && req.user!.role !== 'admin') {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+
+    const result = await CampaignService.retryFailedRecipients(req.params.id);
+    res.json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }

@@ -11,11 +11,14 @@ export async function syncCampaignProgress(campaignId: string) {
 
   if (!campaign) return;
 
-  const [sent, failed, pending] = await Promise.all([
+  const [sent, failed, retried, pending] = await Promise.all([
     prisma.campaignRecipient.count({ where: { campaignId, status: 'sent' } }),
     prisma.campaignRecipient.count({ where: { campaignId, status: 'failed' } }),
+    prisma.campaignRecipient.count({ where: { campaignId, status: 'retried' } }),
     prisma.campaignRecipient.count({ where: { campaignId, status: 'pending' } }),
   ]);
+
+  const totalFailed = failed + retried;
 
   let newStatus = campaign.status;
 
@@ -24,8 +27,8 @@ export async function syncCampaignProgress(campaignId: string) {
     await prisma.campaignLog.create({
       data: {
         campaignId,
-        message: `Campaign completed. Sent: ${sent}, Failed: ${failed}`,
-        level: failed > 0 ? 'warn' : 'info',
+        message: `Campaign completed. Sent: ${sent}, Failed: ${totalFailed}`,
+        level: totalFailed > 0 ? 'warn' : 'info',
       },
     });
   } else if (campaign.status === 'completed' && pending > 0) {
@@ -34,13 +37,13 @@ export async function syncCampaignProgress(campaignId: string) {
 
   await prisma.campaign.update({
     where: { id: campaignId },
-    data: { sentCount: sent, failedCount: failed, status: newStatus },
+    data: { sentCount: sent, failedCount: totalFailed, status: newStatus },
   });
 
   broadcastProgress({
     campaignId,
     sentCount: sent,
-    failedCount: failed,
+    failedCount: totalFailed,
     totalRecipients: campaign.totalRecipients,
     status: newStatus,
   });

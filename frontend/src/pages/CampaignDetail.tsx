@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Campaign, WsMessage } from '../types';
-import { ArrowLeft, Send, FileText, Download, Copy } from 'lucide-react';
+import { ArrowLeft, Send, FileText, Download, Copy, RotateCcw } from 'lucide-react';
 
 const statusBadge: Record<string, string> = {
   draft: 'badge-gray',
@@ -27,6 +27,8 @@ export default function CampaignDetail() {
   const [error, setError] = useState('');
   const [starting, setStarting] = useState(false);
   const [exportingFailed, setExportingFailed] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [retryingAll, setRetryingAll] = useState(false);
 
   const loadCampaign = useCallback(async () => {
     if (!id) return;
@@ -78,6 +80,34 @@ export default function CampaignDetail() {
       navigate(`/campaigns/${c.id}`);
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const handleRetryRecipient = async (recipientId: string) => {
+    if (!id) return;
+    setRetryingId(recipientId);
+    setError('');
+    try {
+      await api.retryRecipient(id, recipientId);
+      await loadCampaign();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
+  const handleRetryAllFailed = async () => {
+    if (!id) return;
+    setRetryingAll(true);
+    setError('');
+    try {
+      await api.retryFailedRecipients(id);
+      await loadCampaign();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setRetryingAll(false);
     }
   };
 
@@ -155,9 +185,15 @@ export default function CampaignDetail() {
           )}
           <button onClick={handleDuplicate} className="btn-secondary"><Copy className="w-4 h-4" /></button>
           {campaign.failedCount > 0 && (
-            <button onClick={handleExportFailed} disabled={exportingFailed} className="btn-secondary">
-              <Download className="w-4 h-4" />
-            </button>
+            <>
+              <button onClick={handleRetryAllFailed} disabled={retryingAll} className="btn-secondary">
+                <RotateCcw className="w-4 h-4" />
+                {retryingAll ? 'Retrying…' : 'Retry failed'}
+              </button>
+              <button onClick={handleExportFailed} disabled={exportingFailed} className="btn-secondary">
+                <Download className="w-4 h-4" />
+              </button>
+            </>
           )}
           <Link to={`/campaigns/${id}/logs`} className="btn-secondary"><FileText className="w-4 h-4" /></Link>
         </div>
@@ -209,20 +245,48 @@ export default function CampaignDetail() {
                   <th>Email</th>
                   <th>Status</th>
                   <th>Retries</th>
-                  <th>Response</th>
+                  <th>Error</th>
                   <th>Sent</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                {campaign.recipients.map((r) => (
+                {campaign.recipients.map((r) => {
+                  const isFailed = r.status === 'failed' || r.status === 'retried';
+                  return (
                   <tr key={r.id}>
                     <td>{r.email}</td>
-                    <td><span className={recipientBadge[r.status] || 'badge-gray'}>{r.status}</span></td>
+                    <td>
+                      <span className={recipientBadge[isFailed ? 'failed' : r.status] || 'badge-gray'}>
+                        {isFailed ? 'failed' : r.status}
+                      </span>
+                    </td>
                     <td className="tabular-nums text-slate-500">{r.retryCount}</td>
-                    <td className="max-w-[160px] truncate text-slate-400">{r.response || r.errorMessage || '—'}</td>
+                    <td className="max-w-xs text-sm">
+                      {r.errorMessage ? (
+                        <span className="text-rose-600 dark:text-rose-400 break-words">{r.errorMessage}</span>
+                      ) : r.response ? (
+                        <span className="text-slate-400 truncate block">{r.response}</span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
                     <td className="text-slate-400 tabular-nums">{r.sentAt ? new Date(r.sentAt).toLocaleString() : '—'}</td>
+                    <td className="text-right">
+                      {isFailed && (
+                        <button
+                          onClick={() => handleRetryRecipient(r.id)}
+                          disabled={retryingId === r.id}
+                          className="btn-ghost text-xs py-1 px-2"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          {retryingId === r.id ? '…' : 'Retry'}
+                        </button>
+                      )}
+                    </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           ) : (
