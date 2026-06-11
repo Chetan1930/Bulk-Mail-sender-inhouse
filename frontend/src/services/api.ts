@@ -41,12 +41,6 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
-  register: (email: string, password: string, name: string, role?: string) =>
-    request<{ user: User; token: string }>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, name, role }),
-    }),
-
   getProfile: () => request<User>('/auth/profile'),
 
   // Dashboard

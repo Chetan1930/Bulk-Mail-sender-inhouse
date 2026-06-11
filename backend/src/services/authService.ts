@@ -7,7 +7,7 @@ import { UserPayload } from '../types';
 const prisma = new PrismaClient();
 
 export class AuthService {
-  static async register(email: string, password: string, name: string, role: string = 'manager') {
+  static async register(email: string, password: string, name: string, role: string = 'user') {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       throw new Error('Email already registered');

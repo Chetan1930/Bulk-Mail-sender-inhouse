@@ -8,6 +8,8 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET || 'dev-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  // Public self-signup is disabled by default — provision users via SEED_ADMIN_* or admin tools
+  allowPublicSignup: process.env.ALLOW_PUBLIC_SIGNUP === 'true',
   sendgridApiKey: process.env.SENDGRID_API_KEY || '',
   smtp: {
     host: process.env.SMTP_HOST || '',

@@ -7,7 +7,6 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -48,14 +47,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(result.user);
   }, []);
 
-  const register = useCallback(async (email: string, password: string, name: string) => {
-    const result = await api.register(email, password, name);
-    localStorage.setItem('token', result.token);
-    localStorage.setItem('user', JSON.stringify(result.user));
-    setToken(result.token);
-    setUser(result.user);
-  }, []);
-
   const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -70,7 +61,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         loading,
         login,
-        register,
         logout,
         isAuthenticated: !!token && !!user,
         isAdmin: user?.role === 'admin',

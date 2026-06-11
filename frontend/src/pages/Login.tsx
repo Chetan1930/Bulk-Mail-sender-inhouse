@@ -30,7 +30,7 @@ export default function Login() {
             <Mail className="w-5 h-5 text-white" />
           </div>
           <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">MailFlow</h1>
-          <p className="mt-1 text-sm text-slate-500">Sign in to your account</p>
+          <p className="mt-1 text-sm text-slate-500">Sign in with your provided credentials</p>
         </div>
 
         <div className="card p-6">

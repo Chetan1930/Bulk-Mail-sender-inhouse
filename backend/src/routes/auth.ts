@@ -3,13 +3,18 @@ import { AuthService } from '../services/authService';
 import { authenticate } from '../middleware/auth';
 import { authLimiter } from '../middleware/rateLimiter';
 import { AuthRequest } from '../types';
+import { config } from '../config';
 
 const router = Router();
 
 router.post('/register', authLimiter, async (req: Request, res: Response) => {
+  if (!config.allowPublicSignup) {
+    res.status(403).json({ error: 'Registration is disabled. Contact your administrator for access.' });
+    return;
+  }
   try {
-    const { email, password, name, role } = req.body;
-    const result = await AuthService.register(email, password, name, role);
+    const { email, password, name } = req.body;
+    const result = await AuthService.register(email, password, name);
     res.status(201).json(result);
   } catch (error: any) {
     res.status(400).json({ error: error.message });

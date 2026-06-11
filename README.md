@@ -1,6 +1,6 @@
 # MailFlow - Bulk Email Campaign Platform
 
-A self-service bulk email campaign platform for internal company usage. Built with React, Express, BullMQ, Redis, and PostgreSQL.
+A managed bulk email campaign platform. Customers sign in with credentials you provide — there is no public signup. Built with React, Express, BullMQ, Redis, and PostgreSQL.
 
 ## Features
 
@@ -58,7 +58,13 @@ npm run dev  # Starts on http://localhost:5173
 
 ### 4. Login
 
-Open http://localhost:5173 and sign in with the admin credentials set in `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`.
+Open http://localhost:5173 and sign in with credentials you provision in `.env` (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Public registration is disabled by default (`ALLOW_PUBLIC_SIGNUP=false`).
+
+### Managed access model
+
+- **No signup page** — users cannot create accounts themselves
+- **You provision logins** — set `SEED_ADMIN_*` in `.env` on deploy, or add users directly in the database
+- **Billing / access** — managed by you on your own schedule (e.g. monthly); the app does not handle payments or self-service plans
 
 ## Project Structure
 
@@ -134,7 +140,7 @@ Use ports **5434** (Postgres) and **6380** (Redis) from `backend/.env.example` w
 | Method | Route | Description |
 |--------|-------|-------------|
 | POST | /api/auth/login | User login |
-| POST | /api/auth/register | User registration |
+| POST | /api/auth/register | Disabled by default (`ALLOW_PUBLIC_SIGNUP=false`) |
 | GET | /api/auth/profile | Get user profile |
 | GET | /api/dashboard/stats | Dashboard statistics |
 | GET | /api/campaigns | List campaigns |
