@@ -109,12 +109,12 @@ export default function CreateCampaign() {
     setSending(true);
     try {
       const campaignData: any = {
-        name: form.name,
-        subject: form.subject,
+        name: form.name.trim() || `Campaign ${new Date().toLocaleString()}`,
+        subject: form.subject.trim(),
         body: bodyMode === 'template' ? '' : form.body,
         provider: form.provider,
         senderEmail: form.senderEmail,
-        senderName: form.senderName,
+        senderName: form.senderName.trim(),
         templateId: bodyMode === 'template' ? form.templateId : undefined,
       };
 
@@ -216,8 +216,8 @@ export default function CreateCampaign() {
           <div className="card-body space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="label">Campaign name</label>
-                <input className="input" placeholder="Summer Sale 2025" value={form.name} onChange={e => updateField('name', e.target.value)} />
+                <label className="label">Campaign name <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input className="input" placeholder="Auto-generated if left blank" value={form.name} onChange={e => updateField('name', e.target.value)} />
               </div>
               <div>
                 <label className="label">Email provider</label>
@@ -242,18 +242,22 @@ export default function CreateCampaign() {
             </div>
 
             <div>
-              <label className="label">Subject line</label>
-              <input className="input" placeholder="Welcome to {{Event}}" value={form.subject} onChange={e => updateField('subject', e.target.value)} />
-              <p className="help-text">Use <code>{'{{Variable}}'}</code> for dynamic CSV values</p>
+              <label className="label">
+                Subject line
+                {bodyMode === 'template' && <span className="text-gray-400 font-normal"> (optional — template defines it)</span>}
+                {bodyMode === 'html' && <span className="text-gray-400 font-normal"> (optional)</span>}
+              </label>
+              <input className="input" placeholder={bodyMode === 'template' ? 'Overrides template subject if set' : 'Welcome to {{Event}}'} value={form.subject} onChange={e => updateField('subject', e.target.value)} />
+              {bodyMode === 'html' && <p className="help-text">Use <code>{'{{Variable}}'}</code> for dynamic CSV values</p>}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="label">Sender email</label>
+                <label className="label">Sender email <span className="text-red-400">*</span></label>
                 <input type="email" className="input" placeholder="noreply@company.com" value={form.senderEmail} onChange={e => updateField('senderEmail', e.target.value)} />
               </div>
               <div>
-                <label className="label">Sender name</label>
+                <label className="label">Sender name <span className="text-gray-400 font-normal">(optional)</span></label>
                 <input className="input" placeholder="Your Company" value={form.senderName} onChange={e => updateField('senderName', e.target.value)} />
               </div>
             </div>
@@ -262,7 +266,7 @@ export default function CreateCampaign() {
               <div className="p-4 bg-gray-50 dark:bg-surface-800/50 rounded-lg space-y-3">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">SendGrid</p>
                 <div>
-                  <label className="label">API key</label>
+                  <label className="label">API key <span className="text-red-400">*</span></label>
                   <input type="password" className="input" placeholder="SG.xxxxxxxx..." value={form.sendgridApiKey} onChange={e => updateField('sendgridApiKey', e.target.value)} />
                 </div>
               </div>
@@ -326,6 +330,9 @@ export default function CreateCampaign() {
                 </>
               ) : (
                 <>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">SendGrid Dynamic Template ID <span className="text-red-400">*</span></span>
+                  </div>
                   <input
                     className="input"
                     placeholder="d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -333,8 +340,8 @@ export default function CreateCampaign() {
                     onChange={e => updateField('templateId', e.target.value)}
                   />
                   <p className="help-text">
-                    Find your template ID in the SendGrid dashboard under Email API → Dynamic Templates.
-                    CSV column values are passed as <code>dynamicTemplateData</code> — use <code>{'{{ColumnName}}'}</code> in your template.
+                    Find it in SendGrid → Email API → Dynamic Templates.
+                    CSV column values are injected as <code>dynamicTemplateData</code> — reference them with <code>{'{{ColumnName}}'}</code> in your template.
                   </p>
                 </>
               )}
@@ -350,7 +357,12 @@ export default function CreateCampaign() {
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setStep(2)}
-                disabled={!form.name || !form.subject || !form.senderEmail || (bodyMode === 'html' ? !form.body : !form.templateId)}
+                disabled={
+                  !form.senderEmail ||
+                  (form.provider === 'sendgrid' && !form.sendgridApiKey) ||
+                  (form.provider === 'smtp' && !form.smtpHost) ||
+                  (bodyMode === 'html' ? !form.body : !form.templateId)
+                }
                 className="btn-primary"
               >
                 Continue <ChevronRight className="w-4 h-4" />

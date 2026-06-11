@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import { Send, Users, AlertCircle, Activity, PlusCircle, ChevronRight } from 'lucide-react';
 
-const CHART_COLORS = ['#4f46e5', '#ef4444'];
+const CHART_COLORS = ['#248f68', '#e84a1e'];
 
 const statusBadge: Record<string, string> = {
   draft: 'badge-gray',
@@ -63,17 +63,19 @@ export default function Dashboard() {
   ];
 
   const statCards = [
-    { label: 'Campaigns', value: stats?.totalCampaigns || 0, icon: Send },
-    { label: 'Emails sent', value: stats?.totalSent || 0, icon: Users },
-    { label: 'Failed', value: stats?.totalFailed || 0, icon: AlertCircle },
-    { label: 'Active', value: stats?.activeCampaigns || 0, icon: Activity },
+    { label: 'Campaigns', value: stats?.totalCampaigns || 0, icon: Send, iconStyle: { color: '#1a7352' }, bgStyle: { backgroundColor: '#edf7f2' } },
+    { label: 'Emails sent', value: stats?.totalSent || 0, icon: Users, iconStyle: { color: '#1a7352' }, bgStyle: { backgroundColor: '#edf7f2' } },
+    { label: 'Failed', value: stats?.totalFailed || 0, icon: AlertCircle, iconStyle: { color: '#c93a12' }, bgStyle: { backgroundColor: '#fff2ee' } },
+    { label: 'Active', value: stats?.activeCampaigns || 0, icon: Activity, iconStyle: { color: '#b45309' }, bgStyle: { backgroundColor: '#fffbeb' } },
   ];
 
+  const isDark = document.documentElement.classList.contains('dark');
   const tooltipStyle = {
-    backgroundColor: 'var(--tw-bg-opacity, 1)',
-    border: '1px solid #e5e7eb',
+    backgroundColor: isDark ? '#111e15' : '#ffffff',
+    border: `1px solid ${isDark ? '#1e3224' : '#e5e7eb'}`,
     borderRadius: '8px',
     fontSize: '13px',
+    color: isDark ? '#d1e8d8' : '#111827',
   };
 
   return (
@@ -99,7 +101,9 @@ export default function Dashboard() {
                   {s.value.toLocaleString()}
                 </p>
               </div>
-              <s.icon className="w-5 h-5 text-gray-300 dark:text-surface-600" />
+              <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={s.bgStyle}>
+                <s.icon className="w-4 h-4" style={s.iconStyle} />
+              </div>
             </div>
           </div>
         ))}
