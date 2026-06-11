@@ -187,10 +187,10 @@ export default function CreateCampaign() {
           const isDone = step > num;
           return (
             <div key={label} className="flex items-center gap-2">
-              {i > 0 && <div className={`h-px w-8 ${isDone || isActive ? 'bg-primary-600' : 'bg-gray-200 dark:bg-surface-700'}`} />}
-              <div className={`flex items-center gap-2 text-sm ${isActive ? 'text-primary-600 dark:text-primary-400 font-medium' : isDone ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                  isDone ? 'bg-primary-600 text-white' : isActive ? 'bg-primary-100 dark:bg-primary-950 text-primary-700 dark:text-primary-300 ring-2 ring-primary-600' : 'bg-gray-100 dark:bg-surface-800 text-gray-400'
+              {i > 0 && <div className={`h-px w-8 ${isDone || isActive ? 'bg-gray-900 dark:bg-gray-100' : 'bg-gray-200 dark:bg-gray-800'}`} />}
+              <div className={`flex items-center gap-2 text-sm ${isActive ? 'font-medium' : 'text-gray-400'}`}>
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                  isDone ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900' : isActive ? 'border border-gray-900 dark:border-gray-100' : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                 }`}>
                   {isDone ? <CheckCircle className="w-3.5 h-3.5" /> : num}
                 </span>
@@ -229,8 +229,8 @@ export default function CreateCampaign() {
                       onClick={() => switchProvider(p)}
                       className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
                         form.provider === p
-                          ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300'
-                          : 'border-gray-200 dark:border-surface-700 text-gray-500 hover:border-gray-300'
+                          ? 'border-gray-900 dark:border-gray-100 bg-gray-100 dark:bg-gray-800'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-500'
                       }`}
                     >
                       {p === 'sendgrid' ? <Mail className="w-3.5 h-3.5" /> : <Server className="w-3.5 h-3.5" />}
@@ -263,7 +263,7 @@ export default function CreateCampaign() {
             </div>
 
             {form.provider === 'sendgrid' && (
-              <div className="p-4 bg-gray-50 dark:bg-surface-800/50 rounded-lg space-y-3">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-3">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">SendGrid</p>
                 <div>
                   <label className="label">API key <span className="text-red-400">*</span></label>
@@ -273,7 +273,7 @@ export default function CreateCampaign() {
             )}
 
             {form.provider === 'smtp' && (
-              <div className="p-4 bg-gray-50 dark:bg-surface-800/50 rounded-lg space-y-3">
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-3">
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">SMTP</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className="label">Host</label><input className="input" placeholder="smtp.example.com" value={form.smtpHost} onChange={e => updateField('smtpHost', e.target.value)} /></div>
@@ -293,8 +293,8 @@ export default function CreateCampaign() {
                   onClick={() => setBodyMode('html')}
                   className={`flex items-center gap-2 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
                     bodyMode === 'html'
-                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300'
-                      : 'border-gray-200 dark:border-surface-700 text-gray-500 hover:border-gray-300'
+                      ? 'border-gray-900 dark:border-gray-100 bg-gray-100 dark:bg-gray-800'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-500'
                   }`}
                 >
                   <Code className="w-3.5 h-3.5" />
@@ -306,8 +306,8 @@ export default function CreateCampaign() {
                     onClick={() => setBodyMode('template')}
                     className={`flex items-center gap-2 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
                       bodyMode === 'template'
-                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300'
-                        : 'border-gray-200 dark:border-surface-700 text-gray-500 hover:border-gray-300'
+                        ? 'border-gray-900 dark:border-gray-100 bg-gray-100 dark:bg-gray-800'
+                        : 'border-gray-200 dark:border-gray-700 text-gray-500'
                     }`}
                   >
                     <Hash className="w-3.5 h-3.5" />
@@ -348,9 +348,9 @@ export default function CreateCampaign() {
             </div>
 
             {bodyMode === 'html' && showPreview && form.body && (
-              <div className="border border-gray-200 dark:border-surface-700 rounded-lg overflow-hidden">
-                <div className="px-4 py-2 bg-gray-50 dark:bg-surface-800 border-b border-gray-200 dark:border-surface-700 text-xs text-gray-500">Preview</div>
-                <div className="p-4 bg-white dark:bg-surface-900 max-h-60 overflow-auto" dangerouslySetInnerHTML={{ __html: renderPreview() }} />
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500">Preview</div>
+                <div className="p-4 bg-white dark:bg-gray-900 max-h-60 overflow-auto" dangerouslySetInnerHTML={{ __html: renderPreview() }} />
               </div>
             )}
 
@@ -380,9 +380,9 @@ export default function CreateCampaign() {
           <div className="card-body space-y-5">
             <div
               className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
-                dragging ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30' :
-                file ? 'border-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20' :
-                'border-gray-200 dark:border-surface-700 hover:border-gray-300 dark:hover:border-surface-600'
+                dragging ? 'border-gray-900 dark:border-gray-100 bg-gray-50 dark:bg-gray-900' :
+                file ? 'border-gray-400 bg-gray-50 dark:bg-gray-900' :
+                'border-gray-200 dark:border-gray-700'
               }`}
               onClick={() => fileInputRef.current?.click()}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
@@ -390,8 +390,8 @@ export default function CreateCampaign() {
               onDrop={handleDrop}
             >
               {file
-                ? <FileSpreadsheet className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
-                : <Upload className="w-8 h-8 text-gray-300 dark:text-surface-600 mx-auto mb-3" />
+                ? <FileSpreadsheet className="w-8 h-8 text-gray-500 mx-auto mb-3" />
+                : <Upload className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               }
               {file ? (
                 <>
@@ -400,7 +400,7 @@ export default function CreateCampaign() {
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Drop a CSV file here, or <span className="text-primary-600">browse</span></p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Drop a CSV file here, or browse</p>
                   <p className="text-xs text-gray-400 mt-1">.csv, .xlsx — max 10MB</p>
                 </>
               )}
@@ -409,13 +409,13 @@ export default function CreateCampaign() {
 
             {csvPreview && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <CheckCircle className="w-4 h-4" />
                   <span><strong>{csvPreview.totalRows.toLocaleString()}</strong> rows — {csvPreview.headers.join(', ')}</span>
                 </div>
 
                 {csvPreview.preview.length > 0 && (
-                  <div className="table-wrap border border-gray-200 dark:border-surface-700 rounded-lg">
+                  <div className="table-wrap border border-gray-200 dark:border-gray-700 rounded-lg">
                     <table>
                       <thead>
                         <tr>{csvPreview.headers.map(h => <th key={h}>{h}</th>)}</tr>
@@ -431,7 +431,7 @@ export default function CreateCampaign() {
                       </tbody>
                     </table>
                     {csvPreview.totalRows > 5 && (
-                      <p className="px-4 py-2 text-xs text-gray-400 text-center border-t border-gray-100 dark:border-surface-800">
+                      <p className="px-4 py-2 text-xs text-gray-400 text-center border-t border-gray-100 dark:border-gray-800">
                         Showing 5 of {csvPreview.totalRows.toLocaleString()} rows
                       </p>
                     )}
@@ -467,7 +467,7 @@ export default function CreateCampaign() {
                   ? { label: 'Template ID', value: form.templateId, icon: Hash }
                   : { label: 'Content', value: 'HTML body', icon: Code },
               ].map(({ label, value, icon: Icon }) => (
-                <div key={label} className="p-3 bg-gray-50 dark:bg-surface-800/50 rounded-lg">
+                <div key={label} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                   <div className="flex items-center gap-1.5 mb-1">
                     <Icon className="w-3.5 h-3.5 text-gray-400" />
                     <p className="text-xs text-gray-500">{label}</p>

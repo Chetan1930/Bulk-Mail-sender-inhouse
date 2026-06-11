@@ -7,17 +7,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
-import { Send, Users, AlertCircle, Activity, PlusCircle, ChevronRight } from 'lucide-react';
 
-const CHART_COLORS = ['#248f68', '#e84a1e'];
-
-const statusBadge: Record<string, string> = {
-  draft: 'badge-gray',
-  processing: 'badge-info',
-  completed: 'badge-success',
-  failed: 'badge-danger',
-  paused: 'badge-warning',
-};
+const CHART_COLORS = ['#111827', '#9ca3af'];
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -33,26 +24,17 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="skeleton h-8 w-48" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map(i => <div key={i} className="skeleton h-24" />)}
+      <div className="space-y-4">
+        <div className="skeleton h-6 w-32" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => <div key={i} className="skeleton h-16" />)}
         </div>
-        <div className="skeleton h-64" />
       </div>
     );
   }
 
   if (error) {
-    return (
-      <div className="alert-error">
-        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="font-medium">Failed to load dashboard</p>
-          <p className="mt-0.5 opacity-80">{error}</p>
-        </div>
-      </div>
-    );
+    return <p className="alert-error">{error}</p>;
   }
 
   const total = (stats?.totalSent || 0) + (stats?.totalFailed || 0);
@@ -63,132 +45,81 @@ export default function Dashboard() {
   ];
 
   const statCards = [
-    { label: 'Campaigns', value: stats?.totalCampaigns || 0, icon: Send, iconStyle: { color: '#1a7352' }, bgStyle: { backgroundColor: '#edf7f2' } },
-    { label: 'Emails sent', value: stats?.totalSent || 0, icon: Users, iconStyle: { color: '#1a7352' }, bgStyle: { backgroundColor: '#edf7f2' } },
-    { label: 'Failed', value: stats?.totalFailed || 0, icon: AlertCircle, iconStyle: { color: '#c93a12' }, bgStyle: { backgroundColor: '#fff2ee' } },
-    { label: 'Active', value: stats?.activeCampaigns || 0, icon: Activity, iconStyle: { color: '#b45309' }, bgStyle: { backgroundColor: '#fffbeb' } },
+    { label: 'Campaigns', value: stats?.totalCampaigns || 0 },
+    { label: 'Sent', value: stats?.totalSent || 0 },
+    { label: 'Failed', value: stats?.totalFailed || 0 },
+    { label: 'Active', value: stats?.activeCampaigns || 0 },
   ];
-
-  const isDark = document.documentElement.classList.contains('dark');
-  const tooltipStyle = {
-    backgroundColor: isDark ? '#111e15' : '#ffffff',
-    border: `1px solid ${isDark ? '#1e3224' : '#e5e7eb'}`,
-    borderRadius: '8px',
-    fontSize: '13px',
-    color: isDark ? '#d1e8d8' : '#111827',
-  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Campaign overview and delivery performance"
-        action={
-          <Link to="/campaigns/new" className="btn-primary">
-            <PlusCircle className="w-4 h-4" />
-            New campaign
-          </Link>
-        }
+        action={<Link to="/campaigns/new" className="btn-primary">New campaign</Link>}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {statCards.map((s) => (
           <div key={s.label} className="stat-card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">{s.label}</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white tabular-nums mt-1">
-                  {s.value.toLocaleString()}
-                </p>
-              </div>
-              <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={s.bgStyle}>
-                <s.icon className="w-4 h-4" style={s.iconStyle} />
-              </div>
-            </div>
+            <p className="text-xs text-gray-500">{s.label}</p>
+            <p className="text-xl font-medium tabular-nums mt-1">{s.value.toLocaleString()}</p>
           </div>
         ))}
       </div>
 
       {total > 0 && (
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">Delivery rate</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {stats?.totalSent?.toLocaleString()} of {total.toLocaleString()} delivered
-              </p>
-            </div>
-            <p className="text-2xl font-semibold text-gray-900 dark:text-white tabular-nums">{successRate}%</p>
+        <div className="card p-4">
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-gray-500">Delivery rate</span>
+            <span className="tabular-nums">{successRate}%</span>
           </div>
           <div className="progress-bar">
-            <div className="progress-bar-fill success" style={{ width: `${successRate}%` }} />
+            <div className="progress-bar-fill" style={{ width: `${successRate}%` }} />
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="card">
-          <div className="card-header">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Email distribution</h3>
-          </div>
-          <div className="card-body">
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} barSize={48}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                  <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                    {chartData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          <div className="card-header"><h3 className="text-sm font-medium">Distribution</h3></div>
+          <div className="card-body h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} barSize={40}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip />
+                <Bar dataKey="value" radius={[2, 2, 0, 0]}>
+                  {chartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
         <div className="card">
-          <div className="card-header">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Sent vs failed</h3>
-          </div>
-          <div className="card-body flex items-center justify-center">
-            <div className="h-56 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {chartData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i]} stroke="transparent" />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+          <div className="card-header"><h3 className="text-sm font-medium">Sent vs failed</h3></div>
+          <div className="card-body h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={chartData} cx="50%" cy="50%" innerRadius={45} outerRadius={70} dataKey="value">
+                  {chartData.map((_, i) => <Cell key={i} fill={CHART_COLORS[i]} stroke="transparent" />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>
 
       <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Recent campaigns</h3>
-        </div>
+        <div className="card-header"><h3 className="text-sm font-medium">Recent campaigns</h3></div>
         <div className="table-wrap">
           {stats && stats.recentCampaigns.length > 0 ? (
             <table>
               <thead>
                 <tr>
-                  <th>Campaign</th>
+                  <th>Name</th>
                   <th>Status</th>
                   <th className="text-right">Recipients</th>
                   <th className="text-right">Sent</th>
@@ -197,27 +128,15 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {stats.recentCampaigns.map((campaign) => (
-                  <tr key={campaign.id}>
-                    <td>
-                      <p className="font-medium text-gray-900 dark:text-white">{campaign.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {new Date(campaign.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </p>
-                    </td>
-                    <td>
-                      <span className={statusBadge[campaign.status] || 'badge-gray'}>{campaign.status}</span>
-                    </td>
-                    <td className="text-right tabular-nums">{campaign.totalRecipients.toLocaleString()}</td>
-                    <td className="text-right tabular-nums text-emerald-600 dark:text-emerald-400">{campaign.sentCount.toLocaleString()}</td>
-                    <td className="text-right tabular-nums text-red-500">{campaign.failedCount.toLocaleString()}</td>
+                {stats.recentCampaigns.map((c) => (
+                  <tr key={c.id}>
+                    <td>{c.name}</td>
+                    <td><span className="badge">{c.status}</span></td>
+                    <td className="text-right tabular-nums">{c.totalRecipients.toLocaleString()}</td>
+                    <td className="text-right tabular-nums">{c.sentCount.toLocaleString()}</td>
+                    <td className="text-right tabular-nums">{c.failedCount.toLocaleString()}</td>
                     <td className="text-right">
-                      <Link
-                        to={`/campaigns/${campaign.id}`}
-                        className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:text-primary-700 inline-flex items-center gap-0.5"
-                      >
-                        View <ChevronRight className="w-3 h-3" />
-                      </Link>
+                      <Link to={`/campaigns/${c.id}`} className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-gray-100">View</Link>
                     </td>
                   </tr>
                 ))}
@@ -225,15 +144,8 @@ export default function Dashboard() {
             </table>
           ) : (
             <div className="empty-state">
-              <Send className="w-8 h-8 text-gray-300 dark:text-surface-600" />
-              <div>
-                <p className="font-medium text-gray-700 dark:text-gray-300">No campaigns yet</p>
-                <p className="text-sm text-gray-400 mt-1">Create your first campaign to get started</p>
-              </div>
-              <Link to="/campaigns/new" className="btn-primary">
-                <PlusCircle className="w-4 h-4" />
-                Create campaign
-              </Link>
+              <p className="text-sm">No campaigns yet</p>
+              <Link to="/campaigns/new" className="btn-primary mt-2">Create campaign</Link>
             </div>
           )}
         </div>
