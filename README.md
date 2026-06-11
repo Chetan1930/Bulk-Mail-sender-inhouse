@@ -90,6 +90,49 @@ mailflow/
 └── docker-compose.yml
 ```
 
+## Deployment (Docker)
+
+Deploy the entire app with one command:
+
+```bash
+cp .env.example .env          # Edit JWT_SECRET and FRONTEND_URL for production
+docker compose up -d --build  # Builds and starts all services
+```
+
+Open **http://localhost** (or the port set via `APP_PORT` in `.env`, default `80`).
+
+Default login (when `SEED_ON_START=true`):
+
+- **Admin**: admin@mailflow.com / admin123
+- **Manager**: manager@mailflow.com / manager123
+
+### Production checklist
+
+1. Set a strong `JWT_SECRET` in `.env`
+2. Set `FRONTEND_URL` to your public URL (e.g. `https://mail.yourcompany.com`)
+3. Set `SEED_ON_START=false` after first deploy
+4. Configure `SENDGRID_API_KEY` or SMTP settings in `.env`
+5. Put a reverse proxy with TLS (Caddy, Nginx, Traefik) in front for public access
+
+### Useful commands
+
+```bash
+docker compose logs -f backend   # API logs
+docker compose ps                # Service status
+docker compose down              # Stop everything
+docker compose down -v           # Stop and wipe database volumes
+```
+
+### Local development (DB/Redis only in Docker)
+
+```bash
+docker compose up -d postgres redis
+cd backend && npm install && cp .env.example .env && npx prisma db push && npm run prisma:seed && npm run dev
+cd frontend && npm install && npm run dev
+```
+
+Use ports **5434** (Postgres) and **6380** (Redis) from `backend/.env.example` when connecting from the host.
+
 ## API Routes
 
 | Method | Route | Description |

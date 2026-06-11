@@ -13,6 +13,9 @@ import { setWebSocketServer } from './services/progressTracker';
 const app = express();
 const server = http.createServer(app);
 
+// Behind nginx in Docker/production; required for rate limiting with X-Forwarded-For
+app.set('trust proxy', 1);
+
 // Initialize WebSocket
 const wss = new WebSocketServer(server);
 setWebSocketServer(wss);

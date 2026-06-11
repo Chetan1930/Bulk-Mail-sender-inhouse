@@ -3,23 +3,61 @@ services:
     image: postgres:16-alpine
     container_name: mailflow-postgres
     restart: unless-stopped
-    ports:
-      - '5434:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: mailflow
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d mailflow']
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
     container_name: mailflow-redis
     restart: unless-stopped
-    ports:
-      - '6380:6379'
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: mailflow-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mailflow
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRES_IN: 7d
+      PORT: 3001
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      SEED_ON_START: ${SEED_ON_START:-true}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+
+  frontend:
+    build: ./frontend
+    container_name: mailflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '${APP_PORT:-80}:80'
 
 volumes:
   postgres_data:
