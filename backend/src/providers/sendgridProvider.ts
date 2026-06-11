@@ -10,12 +10,18 @@ export class SendGridProvider implements EmailProvider {
 
   async send(options: SendEmailOptions): Promise<SendEmailResult> {
     try {
-      const msg = {
+      const msg: any = {
         to: options.to,
         from: { email: options.from, name: options.fromName || '' },
         subject: options.subject,
-        html: options.html,
       };
+
+      if (options.templateId) {
+        msg.templateId = options.templateId;
+        msg.dynamicTemplateData = options.dynamicTemplateData || {};
+      } else {
+        msg.html = options.html;
+      }
 
       const [response] = await sgMail.send(msg);
       return {

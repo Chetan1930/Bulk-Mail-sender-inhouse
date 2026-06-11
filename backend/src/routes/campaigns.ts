@@ -96,6 +96,7 @@ router.post('/:id/start', authenticate, async (req: AuthRequest, res: Response) 
         senderName: campaign.senderName,
         smtpConfig: campaign.smtpConfig,
         sendgridApiKey: campaign.sendgridApiKey,
+        templateId: campaign.templateId || undefined,
       });
     }
 

@@ -29,27 +29,32 @@ export function startEmailWorker() {
   const worker = new Worker(
     'email-sending',
     async (job) => {
-      const { campaignId, recipientId, email, subject, body, variablesJson, provider, senderEmail, senderName, smtpConfig, sendgridApiKey } = job.data;
+      const { campaignId, recipientId, email, subject, body, variablesJson, provider, senderEmail, senderName, smtpConfig, sendgridApiKey, templateId } = job.data;
 
-      // Parse variables and render template
       const variables = JSON.parse(variablesJson);
-      const renderedHtml = CsvParserService.renderTemplate(body, variables);
       const renderedSubject = CsvParserService.renderTemplate(subject, variables);
 
-      // Create provider
       const emailProvider = ProviderFactory.createProvider(provider, {
         sendgridApiKey: sendgridApiKey || undefined,
         smtpConfig: smtpConfig || undefined,
       });
 
-      // Send email
-      const result = await emailProvider.send({
+      const sendOptions: any = {
         to: email,
         subject: renderedSubject,
-        html: renderedHtml,
+        html: '',
         from: senderEmail,
         fromName: senderName || undefined,
-      });
+      };
+
+      if (templateId) {
+        sendOptions.templateId = templateId;
+        sendOptions.dynamicTemplateData = variables;
+      } else {
+        sendOptions.html = CsvParserService.renderTemplate(body, variables);
+      }
+
+      const result = await emailProvider.send(sendOptions);
 
       // Update recipient status
       await deliverRecipientEmail(recipientId, result);

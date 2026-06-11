@@ -4,6 +4,8 @@ export interface SendEmailOptions {
   html: string;
   from: string;
   fromName?: string;
+  templateId?: string;
+  dynamicTemplateData?: Record<string, string>;
   attachments?: Array<{ filename: string; content: string; encoding: string }>;
 }
 

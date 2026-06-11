@@ -1,69 +1,48 @@
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Shield, Calendar, Sun, Moon, Server, Key, Save } from 'lucide-react';
-import { useState } from 'react';
+import { useTheme } from '../context/ThemeContext';
+import PageHeader from '../components/PageHeader';
+import { User, Mail, Shield, Calendar, Sun, Moon, Key } from 'lucide-react';
 
 export default function Settings() {
-  const { user, isAdmin } = useAuth();
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('theme') === 'dark' ||
-        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    }
-    return false;
-  });
-
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    localStorage.setItem('theme', newMode ? 'dark' : 'light');
-    document.documentElement.classList.toggle('dark', newMode);
-  };
+  const { user } = useAuth();
+  const { darkMode, toggleDarkMode } = useTheme();
 
   if (!user) return null;
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-6 page-enter">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Manage your account and application preferences
-        </p>
-      </div>
+  const profileFields = [
+    { label: 'Name', value: user.name, icon: User },
+    { label: 'Email', value: user.email, icon: Mail },
+    {
+      label: 'Role',
+      value: user.role === 'admin' ? 'Administrator' : 'Manager',
+      icon: Shield,
+      badge: user.role === 'admin' ? 'badge-info' : 'badge-gray',
+    },
+    {
+      label: 'Member since',
+      value: new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      icon: Calendar,
+    },
+  ];
 
-      {/* Profile Card */}
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Settings"
+        description="Account info and application preferences"
+      />
+
       <div className="card">
         <div className="card-header">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-              <User className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-            </div>
-            <h2 className="font-semibold text-gray-900 dark:text-white">Profile</h2>
-          </div>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Profile</h2>
         </div>
-        <div className="card-body space-y-4">
-          {[
-            { label: 'Name', value: user.name, icon: User },
-            { label: 'Email', value: user.email, icon: Mail },
-            {
-              label: 'Role',
-              value: user.role === 'admin' ? 'Administrator' : 'Manager',
-              icon: Shield,
-              badge: user.role === 'admin' ? 'badge-info' : 'badge-gray',
-            },
-            {
-              label: 'Member Since',
-              value: new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-              icon: Calendar,
-            },
-          ].map(({ label, value, icon: Icon, badge }) => (
-            <div key={label} className="flex items-center justify-between py-2">
+        <div className="card-body divide-y divide-gray-100 dark:divide-surface-800">
+          {profileFields.map(({ label, value, icon: Icon, badge }) => (
+            <div key={label} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-surface-700/50 flex items-center justify-center">
-                  <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                </div>
+                <Icon className="w-4 h-4 text-gray-400" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{value}</p>
+                  <p className="text-sm text-gray-900 dark:text-white">{value}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
                 </div>
               </div>
@@ -73,35 +52,27 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Preferences Card */}
       <div className="card">
         <div className="card-header">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <Sun className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            </div>
-            <h2 className="font-semibold text-gray-900 dark:text-white">Preferences</h2>
-          </div>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Appearance</h2>
         </div>
-        <div className="card-body space-y-4">
+        <div className="card-body">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-surface-700/50 flex items-center justify-center">
-                {darkMode ? <Moon className="w-4 h-4 text-gray-500" /> : <Sun className="w-4 h-4 text-gray-500" />}
-              </div>
+              {darkMode ? <Moon className="w-4 h-4 text-gray-400" /> : <Sun className="w-4 h-4 text-gray-400" />}
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">Dark Mode</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Toggle dark/light theme</p>
+                <p className="text-sm text-gray-900 dark:text-white">Dark mode</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Switch between light and dark theme</p>
               </div>
             </div>
             <button
               onClick={toggleDarkMode}
-              className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
-                darkMode ? 'bg-primary-500' : 'bg-gray-200 dark:bg-surface-600'
+              className={`relative w-10 h-5 rounded-full transition-colors ${
+                darkMode ? 'bg-primary-600' : 'bg-gray-200 dark:bg-surface-700'
               }`}
             >
               <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
                   darkMode ? 'translate-x-5' : 'translate-x-0'
                 }`}
               />
@@ -110,26 +81,18 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Email Configuration Card */}
       <div className="card">
         <div className="card-header">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-              <Server className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <h2 className="font-semibold text-gray-900 dark:text-white">Email Configuration</h2>
-          </div>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Email configuration</h2>
         </div>
         <div className="card-body">
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Email provider settings are configured per campaign. Configure default SendGrid and SMTP settings in your server
-            <code className="mx-1">.env</code> file.
+            Provider settings are configured per campaign. Set default SendGrid and SMTP credentials in your server <code>.env</code> file.
           </p>
-          <div className="flex items-center gap-3 p-4 bg-gray-50/80 dark:bg-surface-900/50 rounded-xl border border-gray-100 dark:border-surface-700/50">
-            <Key className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <div className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-surface-800/50 rounded-lg">
+            <Key className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Environment variables: <code className="font-mono">SENDGRID_API_KEY</code>,{' '}
-              <code className="font-mono">SMTP_HOST</code>, <code className="font-mono">SMTP_PORT</code>
+              <code>SENDGRID_API_KEY</code>, <code>SMTP_HOST</code>, <code>SMTP_PORT</code>
             </p>
           </div>
         </div>

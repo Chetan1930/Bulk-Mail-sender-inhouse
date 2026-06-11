@@ -8,16 +8,24 @@ import CampaignDetail from './pages/CampaignDetail';
 import CampaignLogs from './pages/CampaignLogs';
 import Settings from './pages/Settings';
 
+function LoadingScreen() {
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-surface-950">
+      <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-200 dark:border-surface-700 border-t-primary-600" />
+    </div>
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>;
+  if (loading) return <LoadingScreen />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div></div>;
+  if (loading) return <LoadingScreen />;
   if (isAuthenticated) return <Navigate to="/" replace />;
   return <>{children}</>;
 }

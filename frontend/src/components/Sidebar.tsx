@@ -1,8 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, LogOut, X, Mail, BarChart3, Settings } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, LogOut, X, Mail, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const mainNav = [
+const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/campaigns/new', icon: PlusCircle, label: 'New Campaign', end: false },
   { to: '/settings', icon: Settings, label: 'Settings', end: false },
@@ -21,41 +21,33 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     <>
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden animate-fade-in"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-surface-900 dark:bg-surface-950 transform transition-all duration-300 ease-out lg:translate-x-0 lg:static lg:z-auto ${
-          open ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-50 w-60 flex flex-col bg-white dark:bg-surface-900 border-r border-gray-200 dark:border-surface-800 transform transition-transform duration-200 ease-out lg:relative lg:translate-x-0 lg:flex-shrink-0 ${
+          open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
-        {/* Brand */}
-        <div className="flex items-center justify-between h-16 px-5 border-b border-white/[0.06] flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20">
-              <Mail className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-surface-800 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
+              <Mail className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <span className="text-lg font-bold text-white tracking-tight block leading-tight">MailFlow</span>
-              <span className="text-[10px] font-medium text-primary-400/70 tracking-wider uppercase">Platform</span>
-            </div>
+            <span className="text-base font-semibold text-gray-900 dark:text-white">MailFlow</span>
           </div>
           <button
             onClick={onClose}
-            className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-surface-400 hover:text-white hover:bg-white/5 transition-all"
+            className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-surface-800 transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Primary Nav */}
-        <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
-          <div className="px-3 mb-3">
-            <p className="text-[10px] font-bold text-surface-500 uppercase tracking-[0.15em]">Main Menu</p>
-          </div>
-          {mainNav.map((item) => {
+        <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+          {navItems.map((item) => {
             const isActive = item.end
               ? location.pathname === item.to
               : location.pathname.startsWith(item.to);
@@ -65,69 +57,35 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 to={item.to}
                 end={item.end}
                 onClick={onClose}
-                className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-white/10 text-white shadow-sm'
-                    : 'text-surface-400 hover:bg-white/[0.04] hover:text-surface-200'
+                    ? 'bg-primary-50 dark:bg-primary-950/50 text-primary-700 dark:text-primary-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-surface-800 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
-                <div
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
-                    isActive
-                      ? 'bg-primary-500 shadow-sm shadow-primary-500/30'
-                      : 'bg-white/[0.06] group-hover:bg-white/[0.08]'
-                  }`}
-                >
-                  <item.icon className="w-4 h-4" />
-                </div>
-                <span>{item.label}</span>
+                <item.icon className="w-4 h-4 flex-shrink-0" />
+                {item.label}
               </NavLink>
             );
           })}
-
-          <div className="pt-5 pb-2">
-            <div className="px-3 mb-3">
-              <p className="text-[10px] font-bold text-surface-500 uppercase tracking-[0.15em]">Campaigns</p>
-            </div>
-            <NavLink
-              to="/"
-              end
-              onClick={onClose}
-              className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                location.pathname !== '/' && location.pathname.startsWith('/campaigns')
-                  ? 'bg-white/10 text-white shadow-sm'
-                  : 'text-surface-400 hover:bg-white/[0.04] hover:text-surface-200'
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
-                location.pathname !== '/' && location.pathname.startsWith('/campaigns')
-                  ? 'bg-primary-500 shadow-sm shadow-primary-500/30'
-                  : 'bg-white/[0.06] group-hover:bg-white/[0.08]'
-              }`}>
-                <BarChart3 className="w-4 h-4" />
-              </div>
-              <span>All Campaigns</span>
-            </NavLink>
-          </div>
         </nav>
 
-        {/* User area */}
-        <div className="flex-shrink-0 p-3 border-t border-white/[0.06] space-y-1">
-          <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/[0.04]">
-            <div className="w-8 h-8 flex-shrink-0 bg-gradient-to-br from-primary-500 to-violet-600 rounded-lg flex items-center justify-center text-sm font-bold text-white shadow-sm">
+        <div className="flex-shrink-0 p-3 border-t border-gray-200 dark:border-surface-800">
+          <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
+            <div className="w-7 h-7 flex-shrink-0 bg-primary-100 dark:bg-primary-900/50 rounded-full flex items-center justify-center text-xs font-semibold text-primary-700 dark:text-primary-300">
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{user?.name || 'User'}</p>
-              <p className="text-[11px] text-surface-400 truncate">{user?.email}</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name || 'User'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
             </div>
           </div>
           <button
             onClick={logout}
-            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-surface-400 hover:bg-white/[0.04] hover:text-red-400 transition-all duration-200 group"
+            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-surface-800 hover:text-red-600 dark:hover:text-red-400 transition-colors"
           >
-            <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
-            Sign Out
+            <LogOut className="w-4 h-4" />
+            Sign out
           </button>
         </div>
       </aside>
