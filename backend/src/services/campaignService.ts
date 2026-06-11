@@ -172,14 +172,119 @@ export class CampaignService {
     };
   }
 
+  static async getCampaignOwner(campaignId: string) {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { userId: true },
+    });
+    if (!campaign) throw new Error('Campaign not found');
+    return campaign;
+  }
+
+  static async getRecipientStatusCounts(campaignId: string) {
+    const groups = await prisma.campaignRecipient.groupBy({
+      by: ['status'],
+      where: { campaignId },
+      _count: { _all: true },
+    });
+
+    const counts = { pending: 0, sent: 0, failed: 0, retried: 0 };
+    for (const group of groups) {
+      const key = group.status as keyof typeof counts;
+      if (key in counts) {
+        counts[key] = group._count._all;
+      }
+    }
+    return counts;
+  }
+
+  static async getCampaignProgress(campaignId: string) {
+    const existing = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { status: true },
+    });
+    if (!existing) throw new Error('Campaign not found');
+
+    if (existing.status === 'processing') {
+      const synced = await syncCampaignProgress(campaignId);
+      if (synced) return synced;
+    }
+
+    const counts = await this.getRecipientStatusCounts(campaignId);
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { status: true, totalRecipients: true, sentCount: true, failedCount: true },
+    });
+    if (!campaign) throw new Error('Campaign not found');
+
+    const failedCount = counts.failed + counts.retried;
+    const processed = counts.sent + failedCount;
+
+    return {
+      campaignId,
+      status: campaign.status,
+      sentCount: counts.sent,
+      failedCount,
+      pendingCount: counts.pending,
+      totalRecipients: campaign.totalRecipients,
+      processed,
+      isActive: campaign.status === 'processing',
+    };
+  }
+
+  private static async fetchRecipientsForDisplay(campaignId: string, status: string) {
+    if (status === 'processing') {
+      const [pending, processed] = await Promise.all([
+        prisma.campaignRecipient.findMany({
+          where: { campaignId, status: 'pending' },
+          take: 50,
+          orderBy: { createdAt: 'asc' },
+        }),
+        prisma.campaignRecipient.findMany({
+          where: { campaignId, status: { in: ['sent', 'failed', 'retried'] } },
+          take: 50,
+          orderBy: { sentAt: 'desc' },
+        }),
+      ]);
+
+      const seen = new Set<string>();
+      return [...pending, ...processed].filter((r) => {
+        if (seen.has(r.id)) return false;
+        seen.add(r.id);
+        return true;
+      });
+    }
+
+    return prisma.campaignRecipient.findMany({
+      where: { campaignId },
+      take: 100,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   static async getCampaign(campaignId: string) {
+    const existing = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { status: true },
+    });
+    if (!existing) throw new Error('Campaign not found');
+
+    if (existing.status === 'processing') {
+      await syncCampaignProgress(campaignId);
+    }
+
+    const current = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      select: { status: true },
+    });
+    if (!current) throw new Error('Campaign not found');
+
+    const statusCounts = await this.getRecipientStatusCounts(campaignId);
+    const recipients = await this.fetchRecipientsForDisplay(campaignId, current.status);
+
     const campaign = await prisma.campaign.findUnique({
       where: { id: campaignId },
       include: {
-        recipients: {
-          take: 100,
-          orderBy: { createdAt: 'desc' },
-        },
         logs: {
           orderBy: { createdAt: 'desc' },
           take: 50,
@@ -191,7 +296,24 @@ export class CampaignService {
     });
 
     if (!campaign) throw new Error('Campaign not found');
-    return campaign;
+
+    const pendingCount = statusCounts.pending;
+    const failedCount = statusCounts.failed + statusCounts.retried;
+
+    return {
+      ...campaign,
+      recipients,
+      statusCounts,
+      recipientDisplay: {
+        shown: recipients.length,
+        total: campaign.totalRecipients,
+        pendingCount,
+        truncated: recipients.length < campaign.totalRecipients,
+      },
+      pendingCount,
+      sentCount: statusCounts.sent,
+      failedCount,
+    };
   }
 
   static async getCampaigns(userId: string) {
@@ -205,6 +327,14 @@ export class CampaignService {
   }
 
   static async getDashboardStats(userId: string) {
+    const processingCampaigns = await prisma.campaign.findMany({
+      where: { userId, status: 'processing' },
+      select: { id: true },
+    });
+    for (const campaign of processingCampaigns) {
+      await syncCampaignProgress(campaign.id);
+    }
+
     const totalCampaigns = await prisma.campaign.count({ where: { userId } });
     const activeCampaigns = await prisma.campaign.count({ where: { userId, status: 'processing' } });
 

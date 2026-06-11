@@ -4,7 +4,8 @@ import { useEffect, useRef } from 'react';
 export function useAutoRefresh(
   callback: () => void | Promise<void>,
   enabled: boolean,
-  intervalMs = 3000
+  intervalMs = 3000,
+  immediate = true
 ) {
   const callbackRef = useRef(callback);
   callbackRef.current = callback;
@@ -16,7 +17,11 @@ export function useAutoRefresh(
       void callbackRef.current();
     };
 
+    if (immediate) {
+      tick();
+    }
+
     const id = window.setInterval(tick, intervalMs);
     return () => window.clearInterval(id);
-  }, [enabled, intervalMs]);
+  }, [enabled, intervalMs, immediate]);
 }

@@ -29,11 +29,7 @@ export default function CampaignLogs() {
       const campaign = await api.getCampaign(id);
       setCampaignName(campaign.name);
       setLogs(campaign.logs || []);
-      const pending =
-        campaign.status === 'processing' ||
-        (campaign.totalRecipients > 0 &&
-          campaign.sentCount + campaign.failedCount < campaign.totalRecipients);
-      setIsSending(pending);
+      setIsSending(campaign.status === 'processing');
       setError('');
     } catch (err: any) {
       setError(err.message);
@@ -46,7 +42,7 @@ export default function CampaignLogs() {
     loadLogs();
   }, [loadLogs]);
 
-  useAutoRefresh(() => loadLogs(true), isSending, 3000);
+  useAutoRefresh(() => loadLogs(true), isSending, 2000, false);
 
   const filteredLogs = filter === 'all' ? logs : logs.filter(l => l.level === filter);
 

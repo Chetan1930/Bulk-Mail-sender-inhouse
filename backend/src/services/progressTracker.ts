@@ -14,8 +14,11 @@ export function broadcastProgress(data: {
   campaignId: string;
   sentCount: number;
   failedCount: number;
+  pendingCount: number;
   totalRecipients: number;
+  processed: number;
   status: string;
+  isActive: boolean;
 }) {
   if (wssInstance) {
     wssInstance.broadcast({

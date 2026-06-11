@@ -6,6 +6,24 @@ export interface User {
   createdAt: string;
 }
 
+export interface RecipientStatusCounts {
+  pending: number;
+  sent: number;
+  failed: number;
+  retried: number;
+}
+
+export interface CampaignProgress {
+  campaignId: string;
+  status: CampaignStatus;
+  sentCount: number;
+  failedCount: number;
+  pendingCount: number;
+  totalRecipients: number;
+  processed: number;
+  isActive: boolean;
+}
+
 export interface Campaign {
   id: string;
   name: string;
@@ -19,6 +37,14 @@ export interface Campaign {
   totalRecipients: number;
   sentCount: number;
   failedCount: number;
+  pendingCount?: number;
+  statusCounts?: RecipientStatusCounts;
+  recipientDisplay?: {
+    shown: number;
+    total: number;
+    pendingCount: number;
+    truncated: boolean;
+  };
   retryCount: number;
   smtpConfig: SmtpConfig | null;
   sendgridApiKey: string | null;
@@ -109,6 +135,9 @@ export interface WsMessage {
   campaignId: string;
   sentCount: number;
   failedCount: number;
+  pendingCount: number;
   totalRecipients: number;
+  processed: number;
   status: string;
+  isActive: boolean;
 }

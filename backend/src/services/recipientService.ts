@@ -3,13 +3,24 @@ import { broadcastProgress } from './progressTracker';
 
 const prisma = new PrismaClient();
 
-export async function syncCampaignProgress(campaignId: string) {
+export interface CampaignProgressSnapshot {
+  campaignId: string;
+  status: string;
+  sentCount: number;
+  failedCount: number;
+  pendingCount: number;
+  totalRecipients: number;
+  processed: number;
+  isActive: boolean;
+}
+
+export async function syncCampaignProgress(campaignId: string): Promise<CampaignProgressSnapshot | null> {
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
     select: { status: true, totalRecipients: true },
   });
 
-  if (!campaign) return;
+  if (!campaign) return null;
 
   const [sent, failed, retried, pending] = await Promise.all([
     prisma.campaignRecipient.count({ where: { campaignId, status: 'sent' } }),
@@ -19,6 +30,7 @@ export async function syncCampaignProgress(campaignId: string) {
   ]);
 
   const totalFailed = failed + retried;
+  const processed = sent + totalFailed;
 
   let newStatus = campaign.status;
 
@@ -40,13 +52,19 @@ export async function syncCampaignProgress(campaignId: string) {
     data: { sentCount: sent, failedCount: totalFailed, status: newStatus },
   });
 
-  broadcastProgress({
+  const snapshot: CampaignProgressSnapshot = {
     campaignId,
+    status: newStatus,
     sentCount: sent,
     failedCount: totalFailed,
+    pendingCount: pending,
     totalRecipients: campaign.totalRecipients,
-    status: newStatus,
-  });
+    processed,
+    isActive: newStatus === 'processing',
+  };
+
+  broadcastProgress(snapshot);
+  return snapshot;
 }
 
 export async function deliverRecipientEmail(

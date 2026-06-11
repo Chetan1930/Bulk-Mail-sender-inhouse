@@ -44,7 +44,7 @@ export default function Dashboard() {
     (stats?.activeCampaigns ?? 0) > 0 ||
     stats?.recentCampaigns.some((c) => c.status === 'processing') === true;
 
-  useAutoRefresh(() => loadStats(true), hasActiveCampaigns, 5000);
+  useAutoRefresh(() => loadStats(true), hasActiveCampaigns, 3000, false);
 
   if (loading) {
     return (

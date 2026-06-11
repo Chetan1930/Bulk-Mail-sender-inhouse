@@ -1,4 +1,4 @@
-import { Campaign, CampaignLog, CampaignRecipient, CsvPreview, DashboardStats, User } from '../types';
+import { Campaign, CampaignLog, CampaignProgress, CampaignRecipient, CsvPreview, DashboardStats, User } from '../types';
 
 const API_BASE = '/api';
 
@@ -55,7 +55,10 @@ export const api = {
   // Campaigns
   getCampaigns: () => request<Campaign[]>('/campaigns'),
 
-  getCampaign: (id: string) => request<Campaign & { recipients: CampaignRecipient[]; logs: CampaignLog[] }>(`/campaigns/${id}`),
+  getCampaign: (id: string) =>
+    request<Campaign & { recipients: CampaignRecipient[]; logs: CampaignLog[] }>(`/campaigns/${id}`),
+
+  getCampaignProgress: (id: string) => request<CampaignProgress>(`/campaigns/${id}/progress`),
 
   createCampaign: (data: Partial<Campaign>) =>
     request<Campaign>('/campaigns', {

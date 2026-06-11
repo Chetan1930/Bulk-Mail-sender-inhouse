@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { Campaign, WsMessage } from '../types';
-import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { useCampaignLiveUpdates } from '../hooks/useCampaignLiveUpdates';
 import { ArrowLeft, Send, FileText, Download, Copy, RotateCcw } from 'lucide-react';
 
 const statusBadge: Record<string, string> = {
@@ -23,59 +22,18 @@ const recipientBadge: Record<string, string> = {
 export default function CampaignDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { campaign, loading, error, setError, loadCampaign, isActive } = useCampaignLiveUpdates(id);
   const [starting, setStarting] = useState(false);
   const [exportingFailed, setExportingFailed] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retryingAll, setRetryingAll] = useState(false);
-
-  const loadCampaign = useCallback(async (silent = false) => {
-    if (!id) return;
-    try {
-      if (!silent) setLoading(true);
-      setCampaign(await api.getCampaign(id));
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => { loadCampaign(); }, [loadCampaign]);
-
-  const isSending =
-    campaign?.status === 'processing' ||
-    (campaign != null &&
-      campaign.totalRecipients > 0 &&
-      campaign.sentCount + campaign.failedCount < campaign.totalRecipients);
-
-  useAutoRefresh(() => loadCampaign(true), isSending, 3000);
-
-  useEffect(() => {
-    if (!id || campaign?.status !== 'processing') return;
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-    ws.onmessage = (event) => {
-      try {
-        const data: WsMessage = JSON.parse(event.data);
-        if (data.type === 'campaign-progress' && data.campaignId === id) {
-          setCampaign(prev =>
-            prev ? { ...prev, sentCount: data.sentCount, failedCount: data.failedCount, status: data.status as Campaign['status'] } : prev
-          );
-        }
-      } catch {}
-    };
-    return () => ws.close();
-  }, [id, campaign?.status]);
 
   const handleStart = async () => {
     if (!id) return;
     setStarting(true);
     try {
       await api.startCampaign(id);
-      loadCampaign();
+      await loadCampaign();
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -164,14 +122,22 @@ export default function CampaignDetail() {
     );
   }
 
+  const pendingCount =
+    campaign.pendingCount ??
+    campaign.statusCounts?.pending ??
+    Math.max(0, campaign.totalRecipients - campaign.sentCount - campaign.failedCount);
+
   const processed = campaign.sentCount + campaign.failedCount;
-  const progress = campaign.totalRecipients > 0 ? Math.round((processed / campaign.totalRecipients) * 100) : 0;
+  const progress =
+    campaign.totalRecipients > 0
+      ? Math.min(100, Math.round((processed / campaign.totalRecipients) * 100))
+      : 0;
 
   const stats = [
     { label: 'Recipients', value: campaign.totalRecipients },
     { label: 'Sent', value: campaign.sentCount },
     { label: 'Failed', value: campaign.failedCount },
-    { label: 'Pending', value: campaign.totalRecipients - processed },
+    { label: 'Pending', value: pendingCount },
   ];
 
   return (
@@ -183,7 +149,7 @@ export default function CampaignDetail() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100 truncate">{campaign.name}</h1>
               <span className={statusBadge[campaign.status] || 'badge-gray'}>{campaign.status}</span>
-              {isSending && (
+              {isActive && (
                 <span className="badge-info animate-pulse">Live</span>
               )}
             </div>
@@ -197,7 +163,7 @@ export default function CampaignDetail() {
             </button>
           )}
           <button onClick={handleDuplicate} className="btn-secondary"><Copy className="w-4 h-4" /></button>
-          {campaign.failedCount > 0 && (
+          {campaign.failedCount > 0 && !isActive && (
             <>
               <button onClick={handleRetryAllFailed} disabled={retryingAll} className="btn-secondary">
                 <RotateCcw className="w-4 h-4" />
@@ -225,11 +191,13 @@ export default function CampaignDetail() {
 
       <div className="card p-4">
         <div className="flex justify-between text-sm mb-2">
-          <span className="text-slate-500">{processed.toLocaleString()} / {campaign.totalRecipients.toLocaleString()}</span>
+          <span className="text-slate-500">
+            {processed.toLocaleString()} processed · {pendingCount.toLocaleString()} pending
+          </span>
           <span className="font-medium text-slate-700 dark:text-slate-200 tabular-nums">{progress}%</span>
         </div>
         <div className="progress-bar">
-          <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+          <div className="progress-bar-fill transition-all duration-500" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
@@ -249,7 +217,17 @@ export default function CampaignDetail() {
       </div>
 
       <div className="card">
-        <div className="card-header"><h3 className="text-sm font-medium">Recipients</h3></div>
+        <div className="card-header flex items-center justify-between gap-3">
+          <h3 className="text-sm font-medium">Recipients</h3>
+          {campaign.recipientDisplay?.truncated && (
+            <span className="text-xs text-slate-400">
+              Showing {campaign.recipientDisplay.shown} of {campaign.recipientDisplay.total}
+              {isActive && campaign.recipientDisplay.pendingCount > 0
+                ? ` · ${campaign.recipientDisplay.pendingCount} still pending`
+                : ''}
+            </span>
+          )}
+        </div>
         <div className="table-wrap">
           {campaign.recipients && campaign.recipients.length > 0 ? (
             <table>
@@ -286,7 +264,7 @@ export default function CampaignDetail() {
                     </td>
                     <td className="text-slate-400 tabular-nums">{r.sentAt ? new Date(r.sentAt).toLocaleString() : '—'}</td>
                     <td className="text-right">
-                      {isFailed && (
+                      {isFailed && !isActive && (
                         <button
                           onClick={() => handleRetryRecipient(r.id)}
                           disabled={retryingId === r.id}

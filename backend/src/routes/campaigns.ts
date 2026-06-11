@@ -44,6 +44,21 @@ router.post('/', authenticate, campaignLimiter, async (req: AuthRequest, res: Re
   }
 });
 
+// Lightweight live progress (for polling while sending)
+router.get('/:id/progress', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const owner = await CampaignService.getCampaignOwner(req.params.id);
+    if (owner.userId !== req.user!.id && req.user!.role !== 'admin') {
+      res.status(403).json({ error: 'Access denied' });
+      return;
+    }
+    const progress = await CampaignService.getCampaignProgress(req.params.id);
+    res.json(progress);
+  } catch (error: any) {
+    res.status(404).json({ error: error.message });
+  }
+});
+
 // Get single campaign
 router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   try {
