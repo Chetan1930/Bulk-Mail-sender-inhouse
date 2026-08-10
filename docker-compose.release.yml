@@ -1,0 +1,74 @@
+# Full app from a pre-built image (no build on the server).
+#
+# On laptop:
+#   ./scripts/build-release.sh
+#   scp mailflow-app.tar.gz ubuntu@EC2:~/
+#
+# On EC2:
+#   gunzip -c ~/mailflow-app.tar.gz | docker load
+#   cp .env.example .env   # edit secrets
+#   ./scripts/ec2-release-up.sh
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mailflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mailflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d mailflow']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 256m
+
+  redis:
+    image: redis:7-alpine
+    container_name: mailflow-redis
+    restart: unless-stopped
+    command: ['redis-server', '--save', '', '--appendonly', 'no', '--maxmemory', '64mb', '--maxmemory-policy', 'allkeys-lru']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 96m
+
+  app:
+    image: mailflow-app:latest
+    container_name: mailflow-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '${APP_PORT:-8080}:80'
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mailflow
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      JWT_EXPIRES_IN: 7d
+      PORT: 3001
+      # Must match the URL users open in the browser (CORS)
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      ALLOW_PUBLIC_SIGNUP: ${ALLOW_PUBLIC_SIGNUP:-false}
+      SEED_ON_START: ${SEED_ON_START:-true}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+    mem_limit: 768m
+
+volumes:
+  postgres_data:

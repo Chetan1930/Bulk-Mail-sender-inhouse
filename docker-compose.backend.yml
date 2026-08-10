@@ -1,9 +1,10 @@
 # Backend-only stack (no frontend image) — light Alpine services
-# Usage:
-#   cp .env.example .env   # fill JWT_SECRET + SEED_ADMIN_*
-#   docker compose -f docker-compose.backend.yml up -d --build
 #
-# API is bound to localhost only; put host nginx in front.
+# IMPORTANT on small EC2 (1GB RAM):
+#   Do NOT run `up --build` cold — it can freeze the instance.
+#   Prefer: docs/DEPLOY_BACKEND_DOCKER.md → "Safe start" or build image on laptop.
+#
+# Filename is lowercase: docker-compose.backend.yml
 
 services:
   postgres:
@@ -21,20 +22,22 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    mem_limit: 256m
 
   redis:
     image: redis:7-alpine
     container_name: mailflow-redis
     restart: unless-stopped
-    volumes:
-      - redis_data:/data
+    command: ['redis-server', '--save', '', '--appendonly', 'no', '--maxmemory', '64mb', '--maxmemory-policy', 'allkeys-lru']
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 10
+    mem_limit: 96m
 
   backend:
+    image: mailflow-backend:latest
     build: ./backend
     container_name: mailflow-backend
     restart: unless-stopped
@@ -62,7 +65,7 @@ services:
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+    mem_limit: 512m
 
 volumes:
   postgres_data:
-  redis_data:

@@ -97,14 +97,17 @@ mailflow/
 
 ### Backend only on EC2 (Docker + nginx) — recommended for API / Postman
 
-Light Alpine stack (**postgres + redis + backend**, no frontend image):
+Light Alpine stack (**postgres + redis + backend**, no frontend image).
+
+On small EC2, **do not** use `up --build` (it can freeze 1GB instances). Prefer:
 
 ```bash
+# laptop: ./scripts/build-backend-image.sh  →  scp tar to EC2 → docker load
 cp .env.example .env   # set JWT_SECRET + SEED_ADMIN_*
-docker compose -f docker-compose.backend.yml up -d --build
+./scripts/ec2-safe-up.sh
 ```
 
-Full walkthrough (Docker install → nginx copy-paste → every Postman API):  
+Full walkthrough (recover hung EC2 → Docker → nginx → Postman):  
 **[docs/DEPLOY_BACKEND_DOCKER.md](docs/DEPLOY_BACKEND_DOCKER.md)**
 
 Nginx site file (also pasted in that doc): [`deploy/nginx-api.conf`](deploy/nginx-api.conf)

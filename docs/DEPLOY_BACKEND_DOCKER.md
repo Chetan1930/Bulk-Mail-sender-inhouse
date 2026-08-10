@@ -11,6 +11,80 @@ Replace placeholders:
 | `ADMIN_EMAIL` | `admin@yourcompany.com` |
 | `ADMIN_PASSWORD` | a strong password |
 
+> **Filename:** use `docker-compose.backend.yml` (all lowercase).  
+> `docker-compose.Backend.yml` will fail on Linux.
+
+---
+
+## If `docker compose … --build` froze your EC2
+
+That is almost always **out of RAM** during `npm ci` / image build (common on 1GB instances). The machine looks hung until reboot.
+
+### Recover the instance
+
+1. In AWS console: **Instance state → Reboot** (or Stop → Start if reboot fails).
+2. SSH back in.
+3. Stop any leftover compose work:
+
+```bash
+cd ~/MailSender
+docker compose -f docker-compose.backend.yml down || true
+sudo systemctl restart docker
+free -h
+df -h /
+```
+
+### Do not run this on a small EC2 again
+
+```bash
+# AVOID on 1GB RAM:
+docker compose -f docker-compose.backend.yml up -d --build
+```
+
+Use **Option A** (recommended) or **Option B** below.
+
+---
+
+## Option A (recommended) — build image on your laptop, load on EC2
+
+On your **laptop** (this repo):
+
+```bash
+cd /path/to/MailSender
+chmod +x scripts/*.sh
+./scripts/build-backend-image.sh
+# creates mailflow-backend.tar.gz
+```
+
+Copy to EC2:
+
+```bash
+scp -i your-key.pem mailflow-backend.tar.gz ubuntu@YOUR_EC2_IP:~/
+```
+
+On **EC2** (after Docker install + project + `.env` — Steps 1–4):
+
+```bash
+gunzip -c ~/mailflow-backend.tar.gz | docker load
+cd ~/MailSender
+chmod +x scripts/ec2-safe-up.sh
+./scripts/ec2-safe-up.sh
+```
+
+That script adds **2G swap**, starts Postgres/Redis, then starts the preloaded backend **without rebuilding**.
+
+---
+
+## Option B — build on EC2 only after swap
+
+Still risky on 1GB; swap helps a lot.
+
+```bash
+cd ~/MailSender
+chmod +x scripts/ec2-safe-up.sh
+./scripts/ec2-safe-up.sh
+```
+
 ---
 
 ## Step 0 — EC2 basics
@@ -139,14 +213,17 @@ openssl rand -hex 32
 
 ---
 
-## Step 5 — Start the backend stack (Docker)
+## Step 5 — Start the backend stack (safe)
+
+Prefer Option A (laptop image) or Option B (safe script) from the top of this doc.
 
 ```bash
 cd ~/MailSender
-docker compose -f docker-compose.backend.yml up -d --build
+chmod +x scripts/ec2-safe-up.sh
+./scripts/ec2-safe-up.sh
 ```
 
-Wait ~30–60s for schema + seed, then check:
+Wait for seed, then check:
 
 ```bash
 docker compose -f docker-compose.backend.yml ps
@@ -155,23 +232,16 @@ docker compose -f docker-compose.backend.yml logs -f backend
 
 Press `Ctrl+C` to stop following logs (containers keep running).
 
-Test on the server itself (bypasses nginx):
-
 ```bash
 curl -s http://127.0.0.1:3001/health
 ```
 
-Expected:
+Expected: `{"status":"ok","timestamp":"..."}`
 
-```json
-{"status":"ok","timestamp":"..."}
-```
-
-Free disk after build:
+Free disk:
 
 ```bash
 docker image prune -f
-docker builder prune -f
 df -h /
 ```
 

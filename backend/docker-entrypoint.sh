@@ -1,13 +1,17 @@
 #!/bin/sh
 set -e
 
-echo "Applying database schema..."
-until npx prisma db push --skip-generate 2>/dev/null; do
-  echo "Waiting for database..."
+echo "Waiting for database..."
+i=0
+until npx prisma db push --skip-generate; do
+  i=$((i + 1))
+  if [ "$i" -ge 30 ]; then
+    echo "Database not ready after 60s — exiting"
+    exit 1
+  fi
+  echo "Retry $i/30..."
   sleep 2
 done
-
-npx prisma generate
 
 if [ "${SEED_ON_START:-false}" = "true" ]; then
   echo "Seeding database..."
