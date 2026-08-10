@@ -93,16 +93,30 @@ mailflow/
 └── docker-compose.yml
 ```
 
-## Deployment (Docker)
+## Deployment
 
-Deploy the entire app with one command:
+### Backend only on EC2 (Docker + nginx) — recommended for API / Postman
+
+Light Alpine stack (**postgres + redis + backend**, no frontend image):
+
+```bash
+cp .env.example .env   # set JWT_SECRET + SEED_ADMIN_*
+docker compose -f docker-compose.backend.yml up -d --build
+```
+
+Full walkthrough (Docker install → nginx copy-paste → every Postman API):  
+**[docs/DEPLOY_BACKEND_DOCKER.md](docs/DEPLOY_BACKEND_DOCKER.md)**
+
+Nginx site file (also pasted in that doc): [`deploy/nginx-api.conf`](deploy/nginx-api.conf)
+
+### Full stack (API + SPA in Docker)
 
 ```bash
 cp .env.example .env          # Edit JWT_SECRET and FRONTEND_URL for production
 docker compose up -d --build  # Builds and starts all services
 ```
 
-For **EC2 + custom domain** (e.g. `http://sendingmail.chetanchauhan.fun`), see **[deploy/EC2.md](deploy/EC2.md)** and use `deploy/.env.production.example`.
+For **EC2 + custom domain** with the frontend container, see **[deploy/EC2.md](deploy/EC2.md)** and use `deploy/.env.production.example`.
 
 Open **http://localhost** (or the port set via `APP_PORT` in `.env`, default `80`).
 

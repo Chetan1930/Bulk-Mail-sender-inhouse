@@ -23,17 +23,20 @@ setWebSocketServer(wss);
 // Middleware
 app.use(cors({ origin: config.frontendUrl, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
+
+// Health checks (before rate limiter — nginx / uptime probes)
+const healthHandler = (_req: express.Request, res: express.Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+};
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
+
 app.use(apiLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-
-// Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Error handling
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
