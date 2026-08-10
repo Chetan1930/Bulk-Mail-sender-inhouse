@@ -22,11 +22,6 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    if (response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
     throw new Error(error.error || 'Request failed');
   }
 
@@ -34,7 +29,9 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  // Auth
+  getSession: () => request<{ user: User; openAccess: boolean }>('/auth/session'),
+
+  // Auth (optional — open access does not need login)
   login: (email: string, password: string) =>
     request<{ user: User; token: string }>('/auth/login', {
       method: 'POST',

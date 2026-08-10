@@ -24,7 +24,7 @@ const upload = multer({
 // Get all campaigns for user
 router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const campaigns = await CampaignService.getCampaigns(req.user!.id);
+    const campaigns = await CampaignService.getCampaigns(req.user!.id, req.user!.role);
     res.json(campaigns);
   } catch (error: any) {
     res.status(400).json({ error: error.message });

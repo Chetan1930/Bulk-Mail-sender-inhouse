@@ -7,7 +7,7 @@ const router = Router();
 
 router.get('/stats', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const stats = await CampaignService.getDashboardStats(req.user!.id);
+    const stats = await CampaignService.getDashboardStats(req.user!.id, req.user!.role);
     res.json(stats);
   } catch (error: any) {
     res.status(400).json({ error: error.message });

@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, LogOut, X, Mail, Settings } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, X, Mail, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const navItems = [
@@ -14,7 +14,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
 
   return (
@@ -65,22 +65,15 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
         </nav>
 
         <div className="p-3 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
+          <div className="flex items-center gap-2.5 px-3 py-2">
             <div className="w-8 h-8 rounded-full bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-xs font-semibold text-teal-700 dark:text-teal-300">
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{user?.name || 'Operator'}</p>
+              <p className="text-xs text-slate-400 truncate">No login required</p>
             </div>
           </div>
-          <button
-            onClick={logout}
-            className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign out
-          </button>
         </div>
       </aside>
     </>

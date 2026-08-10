@@ -10,6 +10,7 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  openAccess: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,25 +19,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [openAccess, setOpenAccess] = useState(true);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-      // Verify token is still valid before clearing loading
-      api.getProfile()
-        .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
-          setToken(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
+    let cancelled = false;
+
+    async function boot() {
+      try {
+        const session = await api.getSession();
+        if (cancelled) return;
+        setOpenAccess(!!session.openAccess);
+        setUser(session.user);
+        setToken(null);
+        localStorage.removeItem('token');
+        localStorage.setItem('user', JSON.stringify(session.user));
+      } catch {
+        // Fallback: try legacy token session
+        const savedToken = localStorage.getItem('token');
+        const savedUser = localStorage.getItem('user');
+        if (savedToken && savedUser) {
+          try {
+            const profile = await api.getProfile();
+            if (cancelled) return;
+            setToken(savedToken);
+            setUser(profile);
+            setOpenAccess(false);
+          } catch {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
+
+    boot();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -45,13 +66,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('user', JSON.stringify(result.user));
     setToken(result.token);
     setUser(result.user);
+    setOpenAccess(false);
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
+    // Open access: stay signed in as operator
+    api.getSession()
+      .then((session) => {
+        setUser(session.user);
+        setToken(null);
+        setOpenAccess(true);
+        localStorage.setItem('user', JSON.stringify(session.user));
+      })
+      .catch(() => {
+        setUser(null);
+        setToken(null);
+      });
   }, []);
 
   return (
@@ -62,8 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         login,
         logout,
-        isAuthenticated: !!token && !!user,
+        isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
+        openAccess,
       }}
     >
       {children}

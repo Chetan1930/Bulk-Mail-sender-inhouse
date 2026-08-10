@@ -316,9 +316,9 @@ export class CampaignService {
     };
   }
 
-  static async getCampaigns(userId: string) {
+  static async getCampaigns(userId: string, role?: string) {
     return prisma.campaign.findMany({
-      where: { userId },
+      where: role === 'admin' ? {} : { userId },
       orderBy: { createdAt: 'desc' },
       include: {
         _count: { select: { recipients: true } },
@@ -326,25 +326,26 @@ export class CampaignService {
     });
   }
 
-  static async getDashboardStats(userId: string) {
+  static async getDashboardStats(userId: string, role?: string) {
+    const scope = role === 'admin' ? {} : { userId };
     const processingCampaigns = await prisma.campaign.findMany({
-      where: { userId, status: 'processing' },
+      where: { ...scope, status: 'processing' },
       select: { id: true },
     });
     for (const campaign of processingCampaigns) {
       await syncCampaignProgress(campaign.id);
     }
 
-    const totalCampaigns = await prisma.campaign.count({ where: { userId } });
-    const activeCampaigns = await prisma.campaign.count({ where: { userId, status: 'processing' } });
+    const totalCampaigns = await prisma.campaign.count({ where: scope });
+    const activeCampaigns = await prisma.campaign.count({ where: { ...scope, status: 'processing' } });
 
     const aggregation = await prisma.campaign.aggregate({
-      where: { userId },
+      where: scope,
       _sum: { sentCount: true, failedCount: true },
     });
 
     const recentCampaigns = await prisma.campaign.findMany({
-      where: { userId },
+      where: scope,
       orderBy: { createdAt: 'desc' },
       take: 5,
       select: {

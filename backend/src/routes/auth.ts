@@ -7,9 +7,23 @@ import { config } from '../config';
 
 const router = Router();
 
+/** Open-access session — no password; used by the SPA on load */
+router.get('/session', async (_req: Request, res: Response) => {
+  try {
+    if (!config.openAccess) {
+      res.status(401).json({ error: 'Open access is disabled; use /login' });
+      return;
+    }
+    const user = await AuthService.ensureDefaultOperator();
+    res.json({ user, openAccess: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 router.post('/register', authLimiter, async (req: Request, res: Response) => {
   if (!config.allowPublicSignup) {
-    res.status(403).json({ error: 'Registration is disabled. Contact your administrator for access.' });
+    res.status(403).json({ error: 'Registration is disabled.' });
     return;
   }
   try {

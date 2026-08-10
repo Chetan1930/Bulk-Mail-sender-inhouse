@@ -6,7 +6,8 @@ export class SendGridProvider implements EmailProvider {
   name = 'sendgrid';
 
   constructor(apiKey: string) {
-    sgMail.setApiKey(apiKey);
+    // Trim — pasted keys often pick up trailing newlines/spaces and get 401 from SendGrid
+    sgMail.setApiKey(apiKey.trim());
   }
 
   async send(options: SendEmailOptions): Promise<SendEmailResult> {

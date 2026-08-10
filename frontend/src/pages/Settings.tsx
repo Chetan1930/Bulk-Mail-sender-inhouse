@@ -46,7 +46,7 @@ export default function Settings() {
       <div className="card">
         <div className="card-header"><h2 className="text-sm font-medium text-slate-700 dark:text-slate-200">Email configuration</h2></div>
         <div className="card-body text-sm text-slate-500">
-          Provider settings are configured per campaign. Set defaults in your server <code>.env</code> file.
+          SendGrid API keys and SMTP settings are entered per campaign when you create it. Nothing is read from server <code>.env</code>.
         </div>
       </div>
     </div>

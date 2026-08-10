@@ -20,8 +20,13 @@ app.set('trust proxy', 1);
 const wss = new WebSocketServer(server);
 setWebSocketServer(wss);
 
-// Middleware
-app.use(cors({ origin: config.frontendUrl, credentials: true }));
+// Middleware — open internal use: reflect any Origin (credentials still work)
+app.use(
+  cors({
+    origin: config.openAccess ? true : config.frontendUrl,
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '10mb' }));
 
 // Health checks (before rate limiter — nginx / uptime probes)

@@ -6,7 +6,7 @@
 #
 # On EC2:
 #   gunzip -c ~/mailflow-app.tar.gz | docker load
-#   cp .env.example .env   # edit secrets
+#   cp .env.example .env
 #   ./scripts/ec2-release-up.sh
 
 services:
@@ -31,7 +31,7 @@ services:
     image: redis:7-alpine
     container_name: mailflow-redis
     restart: unless-stopped
-    command: ['redis-server', '--save', '', '--appendonly', 'no', '--maxmemory', '64mb', '--maxmemory-policy', 'allkeys-lru']
+    command: ['redis-server', '--save', '', '--appendonly', 'no', '--maxmemory-policy', 'noeviction']
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -56,18 +56,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       JWT_EXPIRES_IN: 7d
       PORT: 3001
-      # Must match the URL users open in the browser (CORS)
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      OPEN_ACCESS: ${OPEN_ACCESS:-true}
       ALLOW_PUBLIC_SIGNUP: ${ALLOW_PUBLIC_SIGNUP:-false}
-      SEED_ON_START: ${SEED_ON_START:-true}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
     mem_limit: 768m
 
 volumes:

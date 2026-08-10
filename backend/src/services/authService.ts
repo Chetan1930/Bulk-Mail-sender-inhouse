@@ -6,7 +6,35 @@ import { UserPayload } from '../types';
 
 const prisma = new PrismaClient();
 
+/** Fixed local operator used when OPEN_ACCESS is on (no login). */
+export const DEFAULT_OPERATOR_EMAIL = 'operator@mailflow.local';
+
 export class AuthService {
+  static async ensureDefaultOperator() {
+    const existing = await prisma.user.findUnique({ where: { email: DEFAULT_OPERATOR_EMAIL } });
+    if (existing) {
+      return {
+        id: existing.id,
+        email: existing.email,
+        name: existing.name,
+        role: existing.role,
+        createdAt: existing.createdAt,
+      };
+    }
+
+    const hashedPassword = await bcrypt.hash(`open-${Date.now()}`, 12);
+    const user = await prisma.user.create({
+      data: {
+        email: DEFAULT_OPERATOR_EMAIL,
+        password: hashedPassword,
+        name: 'Operator',
+        role: 'admin',
+      },
+      select: { id: true, email: true, name: true, role: true, createdAt: true },
+    });
+    return user;
+  }
+
   static async register(email: string, password: string, name: string, role: string = 'user') {
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {

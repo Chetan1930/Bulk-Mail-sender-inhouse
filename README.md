@@ -140,8 +140,8 @@ Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.env` before first deploy.
 1. Set a strong `JWT_SECRET` in `.env`
 2. Set `FRONTEND_URL` to your public URL (e.g. `https://mail.yourcompany.com`)
 3. Set `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, then `SEED_ON_START=false` after first deploy
-4. Configure `SENDGRID_API_KEY` or SMTP settings in `.env`
-5. Put a reverse proxy with TLS (Caddy, Nginx, Traefik) in front for public access
+4. Enter SendGrid/SMTP credentials in the **campaign create** UI (not in `.env`)
+5. Put a reverse proxy with TLS in front for public access when needed
 
 ### Useful commands
 

@@ -6,20 +6,22 @@ import { SmtpConfig, EmailProviderType } from '../types';
 export class ProviderFactory {
   static createProvider(
     type: EmailProviderType,
-    config: { sendgridApiKey?: string; smtpConfig?: SmtpConfig }
+    providerConfig: { sendgridApiKey?: string; smtpConfig?: SmtpConfig }
   ): EmailProvider {
     switch (type) {
-      case 'sendgrid':
-        if (!config.sendgridApiKey) {
-          throw new Error('SendGrid API key is required');
+      case 'sendgrid': {
+        const apiKey = (providerConfig.sendgridApiKey || '').trim();
+        if (!apiKey) {
+          throw new Error('SendGrid API key is required on the campaign');
         }
-        return new SendGridProvider(config.sendgridApiKey);
+        return new SendGridProvider(apiKey);
+      }
 
       case 'smtp':
-        if (!config.smtpConfig) {
-          throw new Error('SMTP configuration is required');
+        if (!providerConfig.smtpConfig?.host) {
+          throw new Error('SMTP settings are required on the campaign');
         }
-        return new SmtpProvider(config.smtpConfig);
+        return new SmtpProvider(providerConfig.smtpConfig);
 
       case 'ses':
         throw new Error('AWS SES provider not yet implemented');

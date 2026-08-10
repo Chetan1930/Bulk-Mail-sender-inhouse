@@ -1,10 +1,5 @@
-# Backend-only stack (no frontend image) — light Alpine services
-#
-# IMPORTANT on small EC2 (1GB RAM):
-#   Do NOT run `up --build` cold — it can freeze the instance.
-#   Prefer: docs/DEPLOY_BACKEND_DOCKER.md → "Safe start" or build image on laptop.
-#
-# Filename is lowercase: docker-compose.backend.yml
+# Backend-only stack — prefer building image on laptop, not on small EC2.
+# Filename: docker-compose.backend.yml
 
 services:
   postgres:
@@ -28,7 +23,7 @@ services:
     image: redis:7-alpine
     container_name: mailflow-redis
     restart: unless-stopped
-    command: ['redis-server', '--save', '', '--appendonly', 'no', '--maxmemory', '64mb', '--maxmemory-policy', 'allkeys-lru']
+    command: ['redis-server', '--save', '', '--appendonly', 'no', '--maxmemory-policy', 'noeviction']
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -55,16 +50,11 @@ services:
       JWT_EXPIRES_IN: 7d
       PORT: 3001
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      OPEN_ACCESS: ${OPEN_ACCESS:-true}
       ALLOW_PUBLIC_SIGNUP: ${ALLOW_PUBLIC_SIGNUP:-false}
-      SEED_ON_START: ${SEED_ON_START:-true}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
     mem_limit: 512m
 
 volumes:

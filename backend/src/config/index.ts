@@ -7,14 +7,9 @@ export const config = {
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
   jwtSecret: process.env.JWT_SECRET || 'dev-secret',
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
-  // Public self-signup is disabled by default — provision users via SEED_ADMIN_* or admin tools
+  // CORS — browser origin; use * / reflect for open internal use
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:8080',
   allowPublicSignup: process.env.ALLOW_PUBLIC_SIGNUP === 'true',
-  sendgridApiKey: process.env.SENDGRID_API_KEY || '',
-  smtp: {
-    host: process.env.SMTP_HOST || '',
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    user: process.env.SMTP_USER || '',
-    pass: process.env.SMTP_PASS || '',
-  },
+  /** When true (default), APIs work without login — credentials come from the campaign form only */
+  openAccess: process.env.OPEN_ACCESS !== 'false',
 };

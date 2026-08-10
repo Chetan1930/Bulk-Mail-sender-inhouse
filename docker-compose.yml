@@ -43,16 +43,12 @@ services:
       JWT_EXPIRES_IN: 7d
       PORT: 3001
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      OPEN_ACCESS: ${OPEN_ACCESS:-true}
       ALLOW_PUBLIC_SIGNUP: ${ALLOW_PUBLIC_SIGNUP:-false}
       SEED_ON_START: ${SEED_ON_START:-true}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       SEED_ADMIN_NAME: ${SEED_ADMIN_NAME:-Admin}
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASS: ${SMTP_PASS:-}
 
   frontend:
     build: ./frontend

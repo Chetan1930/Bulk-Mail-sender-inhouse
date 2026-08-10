@@ -13,10 +13,8 @@ until npx prisma db push --skip-generate; do
   sleep 2
 done
 
-if [ "${SEED_ON_START:-false}" = "true" ]; then
-  echo "Seeding database..."
-  node dist/seed.js
-fi
+echo "Seeding / ensuring open-access operator..."
+node dist/seed.js || true
 
 echo "Starting server..."
 exec "$@"
