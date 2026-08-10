@@ -95,20 +95,30 @@ mailflow/
 
 ## Deployment
 
-### Backend only on EC2 (Docker + nginx) — recommended for API / Postman
+### Full app — one image (recommended)
 
-Light Alpine stack (**postgres + redis + backend**, no frontend image).
-
-On small EC2, **do not** use `up --build` (it can freeze 1GB instances). Prefer:
+Build **frontend + backend + nginx** as `mailflow-app` on your laptop, load on EC2 (no build on the server):
 
 ```bash
-# laptop: ./scripts/build-backend-image.sh  →  scp tar to EC2 → docker load
-cp .env.example .env   # set JWT_SECRET + SEED_ADMIN_*
+# laptop
+./scripts/build-release.sh
+# scp mailflow-app.tar.gz + project → EC2, then:
+gunzip -c ~/mailflow-app.tar.gz | docker load
+cp .env.example .env   # FRONTEND_URL=http://YOUR_IP:8080 , JWT + SEED_ADMIN_*
+./scripts/ec2-release-up.sh
+# open http://YOUR_IP:8080
+```
+
+Guide: **[docs/DEPLOY_RELEASE.md](docs/DEPLOY_RELEASE.md)**
+
+### Backend only (API / Postman)
+
+```bash
+# laptop: ./scripts/build-backend-image.sh → load on EC2
 ./scripts/ec2-safe-up.sh
 ```
 
-Full walkthrough (recover hung EC2 → Docker → nginx → Postman):  
-**[docs/DEPLOY_BACKEND_DOCKER.md](docs/DEPLOY_BACKEND_DOCKER.md)**
+Details: **[docs/DEPLOY_BACKEND_DOCKER.md](docs/DEPLOY_BACKEND_DOCKER.md)**
 
 Nginx site file (also pasted in that doc): [`deploy/nginx-api.conf`](deploy/nginx-api.conf)
 
