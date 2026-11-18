@@ -13,11 +13,15 @@ model User {
   password  String
   name      String   @default("")
   role      String   @default("manager") // "admin" | "manager"
+  active    Boolean  @default(true)
+  totpSecret  String?
+  totpEnabled Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  campaigns  Campaign[]
-  templates  Template[]
+  campaigns         Campaign[] @relation("CampaignOwner")
+  startedCampaigns  Campaign[] @relation("CampaignStarter")
+  templates         Template[]
 }
 
 model Campaign {
@@ -26,7 +30,7 @@ model Campaign {
   subject    String
   body       String
   templateId String?
-  provider   String   @default("sendgrid") // "sendgrid" | "smtp" | "ses"
+  provider   String   @default("sendgrid")
   senderEmail String
   senderName  String   @default("")
   status     String   @default("draft") // "draft" | "processing" | "completed" | "failed" | "paused"
@@ -34,14 +38,15 @@ model Campaign {
   sentCount  Int      @default(0)
   failedCount Int     @default(0)
   retryCount Int      @default(0)
-  smtpConfig Json?
-  sendgridApiKey String?
   scheduledAt DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation("CampaignOwner", fields: [userId], references: [id])
+
+  startedByUserId String?
+  startedBy       User?   @relation("CampaignStarter", fields: [startedByUserId], references: [id])
 
   recipients CampaignRecipient[]
   logs       CampaignLog[]

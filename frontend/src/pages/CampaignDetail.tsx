@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { DryRunReport } from '../types';
 import { useCampaignLiveUpdates } from '../hooks/useCampaignLiveUpdates';
-import { ArrowLeft, Send, FileText, Download, Copy, RotateCcw } from 'lucide-react';
-
+import { ArrowLeft, FileText, Download, Copy, RotateCcw, ShieldCheck, FlaskConical, CheckCircle, AlertCircle } from 'lucide-react';
 const statusBadge: Record<string, string> = {
   draft: 'badge-gray',
   processing: 'badge-info',
@@ -25,12 +25,28 @@ export default function CampaignDetail() {
   const { campaign, loading, error, setError, loadCampaign, isActive } = useCampaignLiveUpdates(id);
   const [starting, setStarting] = useState(false);
   const [exportingFailed, setExportingFailed] = useState(false);
+  const [exportingAll, setExportingAll] = useState(false);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [retryingAll, setRetryingAll] = useState(false);
+  const [dryRunning, setDryRunning] = useState(false);
+  const [testSending, setTestSending] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [showTestEmail, setShowTestEmail] = useState(false);
+  const [dryRunReport, setDryRunReport] = useState<DryRunReport | null>(null);
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleStart = async () => {
-    if (!id) return;
+    if (!id || !campaign) return;
+    const count =
+      campaign.pendingCount ??
+      campaign.statusCounts?.pending ??
+      Math.max(0, campaign.totalRecipients - campaign.sentCount - campaign.failedCount);
+    if (!window.confirm(`Ready to send ${count.toLocaleString()} emails. Continue?`)) {
+      return;
+    }
     setStarting(true);
+    setError('');
+    setSuccessMsg('');
     try {
       await api.startCampaign(id);
       await loadCampaign();
@@ -38,6 +54,48 @@ export default function CampaignDetail() {
       setError(err.message);
     } finally {
       setStarting(false);
+    }
+  };
+
+  const handleDryRun = async () => {
+    if (!id) return;
+    setDryRunning(true);
+    setError('');
+    setSuccessMsg('');
+    try {
+      const report = await api.dryRunCampaign(id);
+      setDryRunReport(report);
+      if (report.valid) {
+        setSuccessMsg('Dry run passed — ready to start.');
+      } else {
+        setError(report.errors.join(' '));
+      }
+    } catch (err: any) {
+      setError(err.message);
+      setDryRunReport(null);
+    } finally {
+      setDryRunning(false);
+    }
+  };
+
+  const handleTestSend = async () => {
+    if (!id) return;
+    setTestSending(true);
+    setError('');
+    setSuccessMsg('');
+    try {
+      const result = await api.testSendCampaign(id, {
+        toEmail: testEmail.trim() || undefined,
+      });
+      const note =
+        result.sourceEmail && result.sourceEmail !== result.email
+          ? ` (data from ${result.sourceEmail})`
+          : '';
+      setSuccessMsg(`Test email sent to ${result.email}${note}`);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setTestSending(false);
     }
   };
 
@@ -79,26 +137,46 @@ export default function CampaignDetail() {
     }
   };
 
+  const downloadCsv = (filename: string, lines: string[]) => {
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleExportFailed = async () => {
     if (!id) return;
     setExportingFailed(true);
     try {
       const failed = await api.exportFailedEmails(id);
-      const csv = [
+      downloadCsv(`failed-emails-${id}.csv`, [
         'Email,Error,Retry Count,Created At',
-        ...failed.map(r => `"${r.email}","${r.errorMessage || ''}",${r.retryCount},"${r.createdAt}"`),
-      ].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `failed-emails-${id}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+        ...failed.map(r => `"${r.email}","${(r.errorMessage || '').replace(/"/g, '""')}",${r.retryCount},"${r.createdAt}"`),
+      ]);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setExportingFailed(false);
+    }
+  };
+
+  const handleExportAll = async () => {
+    if (!id) return;
+    setExportingAll(true);
+    setError('');
+    try {
+      const rows = await api.exportRecipients(id);
+      downloadCsv(`recipients-${id}.csv`, [
+        'Email,Status,Error',
+        ...rows.map(r => `"${r.email}","${r.status}","${(r.errorMessage || '').replace(/"/g, '""')}"`),
+      ]);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setExportingAll(false);
     }
   };
 
@@ -113,7 +191,7 @@ export default function CampaignDetail() {
     );
   }
 
-  if (error || !campaign) {
+  if (!campaign) {
     return (
       <div>
         <p className="alert-error">{error || 'Campaign not found'}</p>
@@ -154,23 +232,65 @@ export default function CampaignDetail() {
               )}
             </div>
             <p className="text-sm text-slate-500 mt-0.5">{new Date(campaign.createdAt).toLocaleDateString()}</p>
+            <p className="text-xs text-slate-400 mt-1.5 space-x-3">
+              <span>
+                Created by{' '}
+                <span className="text-slate-600 dark:text-slate-300">
+                  {campaign.user?.name || campaign.user?.email || '—'}
+                </span>
+              </span>
+              {campaign.startedBy && (
+                <span>
+                  Started by{' '}
+                  <span className="text-slate-600 dark:text-slate-300">
+                    {campaign.startedBy.name || campaign.startedBy.email}
+                  </span>
+                </span>
+              )}
+            </p>
           </div>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
+        <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
           {campaign.status === 'draft' && (
-            <button onClick={handleStart} disabled={starting || campaign.totalRecipients === 0} className="btn-primary">
-              {starting ? 'Starting…' : 'Start'}
-            </button>
+            <>
+              <button onClick={handleDryRun} disabled={dryRunning || campaign.totalRecipients === 0} className="btn-secondary">
+                <ShieldCheck className="w-4 h-4" />
+                {dryRunning ? 'Validating…' : 'Dry run'}
+              </button>
+              <button
+                onClick={() => setShowTestEmail((v) => !v)}
+                disabled={campaign.totalRecipients === 0}
+                className="btn-secondary"
+                type="button"
+              >
+                <FlaskConical className="w-4 h-4" />
+                Test email
+              </button>
+              <button
+                onClick={handleStart}
+                disabled={starting || campaign.totalRecipients === 0 || (dryRunReport !== null && !dryRunReport.valid)}
+                className="btn-primary"
+              >
+                {starting ? 'Starting…' : 'Start'}
+              </button>
+            </>
           )}
           <button onClick={handleDuplicate} className="btn-secondary"><Copy className="w-4 h-4" /></button>
+          {campaign.totalRecipients > 0 && (
+            <button onClick={handleExportAll} disabled={exportingAll} className="btn-secondary" title="Export all recipients">
+              <Download className="w-4 h-4" />
+              {exportingAll ? '…' : 'Export'}
+            </button>
+          )}
           {campaign.failedCount > 0 && !isActive && (
             <>
               <button onClick={handleRetryAllFailed} disabled={retryingAll} className="btn-secondary">
                 <RotateCcw className="w-4 h-4" />
                 {retryingAll ? 'Retrying…' : 'Retry failed'}
               </button>
-              <button onClick={handleExportFailed} disabled={exportingFailed} className="btn-secondary">
+              <button onClick={handleExportFailed} disabled={exportingFailed} className="btn-secondary" title="Export failed only">
                 <Download className="w-4 h-4" />
+                Failed
               </button>
             </>
           )}
@@ -178,7 +298,79 @@ export default function CampaignDetail() {
         </div>
       </div>
 
-      {error && <p className="alert-error">{error}</p>}
+      {showTestEmail && campaign.status === 'draft' && (
+        <div className="card p-4 space-y-3">
+          <div>
+            <label className="label">
+              Send test to <span className="text-slate-400 font-normal">(optional)</span>
+            </label>
+            <input
+              type="text"
+              className="input"
+              placeholder="you@company.com, teammate@company.com"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+            />
+            <p className="help-text">
+              Comma-separated addresses OK. Blank = first CSV row. Always uses first-row template data.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleTestSend}
+            disabled={testSending || campaign.totalRecipients === 0}
+            className="btn-primary"
+          >
+            <FlaskConical className="w-4 h-4" />
+            {testSending ? 'Sending…' : 'Send test'}
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <p className="alert-error flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </p>
+      )}
+      {successMsg && (
+        <p className="alert-success flex items-start gap-2">
+          <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{successMsg}</span>
+        </p>
+      )}
+
+      {dryRunReport && (
+        <div className={`rounded-lg border p-3 text-sm space-y-2 ${
+          dryRunReport.valid
+            ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20'
+            : 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20'
+        }`}>
+          <p className="font-medium text-slate-800 dark:text-slate-100">
+            Pre-send validation {dryRunReport.valid ? 'passed' : 'failed'}
+          </p>
+          <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1">
+            <li>Recipients: {dryRunReport.recipientCount.toLocaleString()} ({dryRunReport.pendingCount.toLocaleString()} pending)</li>
+            {dryRunReport.templateId && <li>Template ID: {dryRunReport.templateId}</li>}
+            {dryRunReport.requiredVariables.length > 0 && (
+              <li>Required vars: {dryRunReport.requiredVariables.join(', ')}</li>
+            )}
+            {dryRunReport.missingVariables.length > 0 && (
+              <li className="text-amber-700 dark:text-amber-300">
+                Missing: {dryRunReport.missingVariables.join(', ')}
+              </li>
+            )}
+            {dryRunReport.columns.length > 0 && (
+              <li>Columns: {dryRunReport.columns.join(', ')}</li>
+            )}
+          </ul>
+          {dryRunReport.errors.length > 0 && (
+            <ul className="text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
+              {dryRunReport.errors.map((e) => <li key={e}>{e}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((s) => (
@@ -201,18 +393,13 @@ export default function CampaignDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="card">
-          <div className="card-header"><h3 className="text-sm font-medium">Info</h3></div>
-          <div className="card-body space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-slate-400">Subject</span><span className="truncate ml-4">{campaign.subject}</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Provider</span><span>{campaign.provider}</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">From</span><span>{campaign.senderEmail}</span></div>
-          </div>
-        </div>
-        <div className="card">
-          <div className="card-header"><h3 className="text-sm font-medium">Preview</h3></div>
-          <div className="p-4 max-h-48 overflow-auto text-sm" dangerouslySetInnerHTML={{ __html: campaign.body }} />
+      <div className="card">
+        <div className="card-header"><h3 className="text-sm font-medium">Info</h3></div>
+        <div className="card-body space-y-2 text-sm">
+          <div className="flex justify-between"><span className="text-slate-400">Subject</span><span className="truncate ml-4">{campaign.subject || 'From template'}</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">Provider</span><span>{campaign.provider}</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">From</span><span>{campaign.senderEmail}</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">Template</span><span className="truncate ml-4">{campaign.templateId || '—'}</span></div>
         </div>
       </div>
 

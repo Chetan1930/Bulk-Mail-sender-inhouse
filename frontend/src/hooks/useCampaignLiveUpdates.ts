@@ -51,19 +51,27 @@ export function useCampaignLiveUpdates(campaignId: string | undefined) {
   }, [loadCampaign]);
 
   const isActive = campaign?.status === 'processing';
+  const [wsConnected, setWsConnected] = useState(false);
 
-  // Fast progress polling while sending
-  useAutoRefresh(loadProgress, isActive, 2000, false);
+  // Progress polling — slower when WebSocket is delivering live updates
+  useAutoRefresh(loadProgress, isActive, wsConnected ? 8000 : 2000, false);
 
   // Full recipient table refresh while sending
-  useAutoRefresh(() => loadCampaign(true), isActive, 8000, false);
+  useAutoRefresh(() => loadCampaign(true), isActive, 10000, false);
 
   // WebSocket for instant counter updates between polls
   useEffect(() => {
-    if (!campaignId || !isActive) return;
+    if (!campaignId || !isActive) {
+      setWsConnected(false);
+      return;
+    }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
 
     ws.onmessage = (event) => {
       try {
@@ -86,7 +94,10 @@ export function useCampaignLiveUpdates(campaignId: string | undefined) {
       }
     };
 
-    return () => ws.close();
+    return () => {
+      setWsConnected(false);
+      ws.close();
+    };
   }, [campaignId, isActive]);
 
   // One final full sync when sending completes

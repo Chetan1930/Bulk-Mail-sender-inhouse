@@ -14,9 +14,8 @@ until npx prisma db push --skip-generate; do
   sleep 2
 done
 
-# Always ensure open-access operator (+ optional SEED_ADMIN_* if set)
 echo "Seeding database..."
-node dist/seed.js || true
+node dist/seed.js
 
 echo "Starting API on :3001..."
 node dist/index.js &

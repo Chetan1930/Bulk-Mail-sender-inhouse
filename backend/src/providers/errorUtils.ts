@@ -1,3 +1,21 @@
+export function isRateLimitError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as {
+    code?: number | string;
+    statusCode?: number;
+    response?: { statusCode?: number; status?: number };
+    message?: string;
+  };
+  const status =
+    err.code === 429 ||
+    err.statusCode === 429 ||
+    err.response?.statusCode === 429 ||
+    err.response?.status === 429;
+  if (status) return true;
+  const msg = (err.message || '').toLowerCase();
+  return msg.includes('too many requests') || msg.includes('rate limit');
+}
+
 export function formatProviderError(error: unknown, provider = 'Email'): string {
   if (!error || typeof error !== 'object') {
     return `${provider} send failed`;

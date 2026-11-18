@@ -1,52 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { CsvPreview } from '../types';
+import { CsvPreview, DryRunReport } from '../types';
 import PageHeader from '../components/PageHeader';
+import { getMailSettings } from '../services/mailSettings';
 import {
-  Upload, Eye, EyeOff, Send, AlertCircle, CheckCircle,
-  ChevronRight, ChevronLeft, FileSpreadsheet, Server, Mail, Settings, Users, Code, Hash,
+  Upload, Send, AlertCircle, CheckCircle,
+  ChevronRight, ChevronLeft, FileSpreadsheet, Settings, Users, Hash, FlaskConical, ShieldCheck,
 } from 'lucide-react';
 
 interface CampaignForm {
   name: string;
   subject: string;
-  body: string;
-  provider: 'sendgrid' | 'smtp';
-  senderEmail: string;
   senderName: string;
-  templateId: string;
-  sendgridApiKey: string;
-  smtpHost: string;
-  smtpPort: string;
-  smtpUser: string;
-  smtpPass: string;
 }
-
-const htmlTemplate = `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #f8f9fa; border-radius: 8px; padding: 30px;">
-    <p style="color: #555; line-height: 1.6;">Hello,</p>
-    <p style="color: #555; line-height: 1.6;">Your message here. Add placeholders matching your CSV column headers.</p>
-  </div>
-</body>
-</html>`;
 
 const defaultForm: CampaignForm = {
   name: '',
   subject: '',
-  body: htmlTemplate,
-  provider: 'sendgrid',
-  senderEmail: '',
   senderName: '',
-  templateId: '',
-  sendgridApiKey: '',
-  smtpHost: '',
-  smtpPort: '587',
-  smtpUser: '',
-  smtpPass: '',
 };
 
 const steps = ['Details', 'Recipients', 'Review'];
@@ -62,30 +34,33 @@ export default function CreateCampaign() {
   const [error, setError] = useState('');
   const [campaignId, setCampaignId] = useState<string | null>(null);
   const [uploadResult, setUploadResult] = useState<{ totalRecipients: number; headers: string[]; preview: Record<string, string> | null } | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [bodyMode, setBodyMode] = useState<'html' | 'template'>('html');
+  const [mailSettings] = useState(getMailSettings);
+  const [dryRunReport, setDryRunReport] = useState<DryRunReport | null>(null);
+  const [dryRunning, setDryRunning] = useState(false);
+  const [testSending, setTestSending] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const settingsReady = Boolean(mailSettings.senderEmail && mailSettings.templateId);
 
   const updateField = (field: keyof CampaignForm, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));
-
-  const switchProvider = (p: 'sendgrid' | 'smtp') => {
-    updateField('provider', p);
-    if (p === 'smtp') setBodyMode('html');
-  };
 
   const processFile = async (f: File) => {
     setFile(f);
     setError('');
     try {
       const preview = await api.parseCsv(f, {
-        template: bodyMode === 'html' ? form.body : '',
-        subject: bodyMode === 'html' ? form.subject : '',
-        bodyMode,
+        bodyMode: 'template',
+        templateId: mailSettings.templateId,
       });
       setCsvPreview(preview);
       if (!preview.validation.valid) {
         setError(preview.validation.errors.join(' '));
+      } else if (preview.templateWarning) {
+        // Soft warning — upload/send still allowed (Mail Send–only API keys)
+        setError(preview.templateWarning);
       }
     } catch (err: any) {
       setError(err.message);
@@ -97,9 +72,8 @@ export default function CreateCampaign() {
     if (step === 2 && file) {
       processFile(file);
     }
-    // Re-validate when template/subject changes on the recipients step
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, form.body, form.subject, bodyMode]);
+  }, [step]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -117,29 +91,19 @@ export default function CreateCampaign() {
     setError('');
     setSending(true);
     try {
-      const campaignData: any = {
+      if (!settingsReady) {
+        throw new Error('Configure sender email, SendGrid API key, and template ID in Settings.');
+      }
+
+      const campaign = await api.createCampaign({
         name: form.name.trim() || `Campaign ${new Date().toLocaleString()}`,
         subject: form.subject.trim(),
-        body: bodyMode === 'template' ? '' : form.body,
-        provider: form.provider,
-        senderEmail: form.senderEmail,
+        body: '',
+        provider: 'sendgrid',
+        senderEmail: mailSettings.senderEmail,
         senderName: form.senderName.trim(),
-        templateId: bodyMode === 'template' ? form.templateId : undefined,
-      };
-
-      if (form.provider === 'sendgrid' && form.sendgridApiKey) {
-        campaignData.sendgridApiKey = form.sendgridApiKey;
-      }
-      if (form.provider === 'smtp') {
-        campaignData.smtpConfig = {
-          host: form.smtpHost,
-          port: parseInt(form.smtpPort) || 587,
-          user: form.smtpUser,
-          pass: form.smtpPass,
-        };
-      }
-
-      const campaign = await api.createCampaign(campaignData);
+        templateId: mailSettings.templateId,
+      });
       setCampaignId(campaign.id);
 
       if (file && campaign.id) {
@@ -150,6 +114,8 @@ export default function CreateCampaign() {
         const upload = await api.uploadRecipients(campaign.id, file, emailField);
         setUploadResult(upload);
       }
+      setDryRunReport(null);
+      setSuccessMsg('');
       setStep(3);
     } catch (err: any) {
       setError(err.message);
@@ -158,9 +124,56 @@ export default function CreateCampaign() {
     }
   };
 
+  const handleDryRun = async () => {
+    if (!campaignId) return;
+    setDryRunning(true);
+    setError('');
+    setSuccessMsg('');
+    try {
+      const report = await api.dryRunCampaign(campaignId);
+      setDryRunReport(report);
+      if (report.valid) {
+        setSuccessMsg('Dry run passed — ready to launch.');
+      } else {
+        setError(report.errors.join(' '));
+      }
+    } catch (err: any) {
+      setError(err.message);
+      setDryRunReport(null);
+    } finally {
+      setDryRunning(false);
+    }
+  };
+
+  const handleTestSend = async () => {
+    if (!campaignId) return;
+    setTestSending(true);
+    setError('');
+    setSuccessMsg('');
+    try {
+      const result = await api.testSendCampaign(campaignId, {
+        toEmail: testEmail.trim() || undefined,
+      });
+      const note =
+        result.sourceEmail && result.sourceEmail !== result.email
+          ? ` (data from ${result.sourceEmail})`
+          : '';
+      setSuccessMsg(`Test email sent to ${result.email}${note}`);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setTestSending(false);
+    }
+  };
+
   const handleStartCampaign = async () => {
     if (!campaignId) return;
+    const count = uploadResult?.totalRecipients || 0;
+    if (!window.confirm(`Ready to send ${count.toLocaleString()} emails. Continue?`)) {
+      return;
+    }
     setSending(true);
+    setError('');
     try {
       await api.startCampaign(campaignId);
       navigate(`/campaigns/${campaignId}`);
@@ -170,25 +183,13 @@ export default function CreateCampaign() {
     }
   };
 
-  const renderPreview = () => {
-    if (!csvPreview?.preview?.[0]) return form.body;
-    let html = form.body;
-    const row = csvPreview.preview[0];
-    for (const header of csvPreview.headers) {
-      const value = row[header] || '';
-      html = html.replace(new RegExp(`\\{\\{${header}\\}\\}`, 'gi'), value);
-    }
-    return html;
-  };
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Create campaign"
-        description="Set up a bulk email campaign in 3 steps"
+        description="Set up a bulk email campaign with your SendGrid template"
       />
 
-      {/* Step indicator */}
       <div className="flex items-center gap-2">
         {steps.map((label, i) => {
           const num = i + 1;
@@ -216,6 +217,12 @@ export default function CreateCampaign() {
           <span>{error}</span>
         </div>
       )}
+      {successMsg && (
+        <div className="alert-success">
+          <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{successMsg}</span>
+        </div>
+      )}
 
       {step === 1 && (
         <div className="card">
@@ -223,47 +230,27 @@ export default function CreateCampaign() {
             <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Campaign details</h2>
           </div>
           <div className="card-body space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Campaign name <span className="text-gray-400 font-normal">(optional)</span></label>
-                <input className="input" placeholder="Auto-generated if left blank" value={form.name} onChange={e => updateField('name', e.target.value)} />
-              </div>
-              <div>
-                <label className="label">Email provider</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(['sendgrid', 'smtp'] as const).map(p => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => switchProvider(p)}
-                      className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-sm font-medium transition-colors ${
-                        form.provider === p
-                          ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300'
-                          : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-slate-300'
-                      }`}
-                    >
-                      {p === 'sendgrid' ? <Mail className="w-3.5 h-3.5" /> : <Server className="w-3.5 h-3.5" />}
-                      {p === 'sendgrid' ? 'SendGrid' : 'SMTP'}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div>
+              <label className="label">Campaign name <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input className="input" placeholder="Auto-generated if left blank" value={form.name} onChange={e => updateField('name', e.target.value)} />
             </div>
 
             <div>
               <label className="label">
-                Subject line
-                {bodyMode === 'template' && <span className="text-gray-400 font-normal"> (optional — template defines it)</span>}
-                {bodyMode === 'html' && <span className="text-gray-400 font-normal"> (optional)</span>}
+                Subject line <span className="text-gray-400 font-normal">(optional — template defines it)</span>
               </label>
-              <input className="input" placeholder={bodyMode === 'template' ? 'Overrides template subject if set' : 'Welcome to {{Event}}'} value={form.subject} onChange={e => updateField('subject', e.target.value)} />
-              {bodyMode === 'html' && <p className="help-text">Use <code>{'{{Variable}}'}</code> for dynamic CSV values</p>}
+              <input
+                className="input"
+                placeholder="Overrides template subject if set"
+                value={form.subject}
+                onChange={e => updateField('subject', e.target.value)}
+              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="label">Sender email <span className="text-red-400">*</span></label>
-                <input type="email" className="input" placeholder="noreply@company.com" value={form.senderEmail} onChange={e => updateField('senderEmail', e.target.value)} />
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/50">
+                <p className="text-xs text-slate-500">Sender email from Settings</p>
+                <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100">{mailSettings.senderEmail || 'Not configured'}</p>
               </div>
               <div>
                 <label className="label">Sender name <span className="text-gray-400 font-normal">(optional)</span></label>
@@ -271,107 +258,29 @@ export default function CreateCampaign() {
               </div>
             </div>
 
-            {form.provider === 'sendgrid' && (
-              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-3">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">SendGrid</p>
-                <div>
-                  <label className="label">API key <span className="text-red-400">*</span></label>
-                  <input type="password" className="input" placeholder="SG.xxxxxxxx..." value={form.sendgridApiKey} onChange={e => updateField('sendgridApiKey', e.target.value)} />
-                </div>
+            {!settingsReady ? (
+              <div className="alert-warning">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>Configure your sender email and SendGrid template ID in Settings before sending.</span>
+                <button type="button" onClick={() => navigate('/settings')} className="ml-auto underline font-medium">Open Settings</button>
               </div>
-            )}
+            ) : null}
 
-            {form.provider === 'smtp' && (
-              <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-3">
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">SMTP</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div><label className="label">Host</label><input className="input" placeholder="smtp.example.com" value={form.smtpHost} onChange={e => updateField('smtpHost', e.target.value)} /></div>
-                  <div><label className="label">Port</label><input className="input" placeholder="587" value={form.smtpPort} onChange={e => updateField('smtpPort', e.target.value)} /></div>
-                  <div><label className="label">Username</label><input className="input" placeholder="user@example.com" value={form.smtpUser} onChange={e => updateField('smtpUser', e.target.value)} /></div>
-                  <div><label className="label">Password</label><input type="password" className="input" placeholder="••••••••" value={form.smtpPass} onChange={e => updateField('smtpPass', e.target.value)} /></div>
-                </div>
-              </div>
-            )}
-
-            {/* Email content mode toggle */}
             <div>
-              <label className="label">Email content</label>
-              <div className="flex gap-2 mb-3">
-                <button
-                  type="button"
-                  onClick={() => setBodyMode('html')}
-                  className={`flex items-center gap-2 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
-                    bodyMode === 'html'
-                      ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300'
-                      : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-slate-300'
-                  }`}
-                >
-                  <Code className="w-3.5 h-3.5" />
-                  HTML body
-                </button>
-                {form.provider === 'sendgrid' && (
-                  <button
-                    type="button"
-                    onClick={() => setBodyMode('template')}
-                    className={`flex items-center gap-2 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
-                      bodyMode === 'template'
-                        ? 'border-teal-500 bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300'
-                        : 'border-slate-200 dark:border-slate-600 text-slate-500 hover:border-slate-300'
-                    }`}
-                  >
-                    <Hash className="w-3.5 h-3.5" />
-                    SendGrid template ID
-                  </button>
-                )}
+              <label className="label">SendGrid template</label>
+              <div className="input flex items-center bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <Hash className="w-3.5 h-3.5 mr-2 text-slate-400" />
+                {mailSettings.templateId || 'Not configured'}
               </div>
-
-              {bodyMode === 'html' ? (
-                <>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Write or paste your HTML email</span>
-                    <button type="button" onClick={() => setShowPreview(!showPreview)} className="btn-ghost text-xs py-1 px-2">
-                      {showPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      {showPreview ? 'Hide' : 'Preview'}
-                    </button>
-                  </div>
-                  <textarea className="input font-mono text-xs h-48 resize-y" value={form.body} onChange={e => updateField('body', e.target.value)} />
-                  <p className="help-text">Use <code>{'{{ColumnName}}'}</code> to insert CSV values</p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">SendGrid Dynamic Template ID <span className="text-red-400">*</span></span>
-                  </div>
-                  <input
-                    className="input"
-                    placeholder="d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                    value={form.templateId}
-                    onChange={e => updateField('templateId', e.target.value)}
-                  />
-                  <p className="help-text">
-                    Find it in SendGrid → Email API → Dynamic Templates.
-                    CSV column values are injected as <code>dynamicTemplateData</code> — reference them with <code>{'{{ColumnName}}'}</code> in your template.
-                  </p>
-                </>
-              )}
+              <p className="help-text">
+                From Settings. CSV columns become <code>dynamicTemplateData</code> — use <code>{'{{ColumnName}}'}</code> in the SendGrid template.
+              </p>
             </div>
-
-            {bodyMode === 'html' && showPreview && form.body && (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs text-gray-500">Preview</div>
-                <div className="p-4 bg-white dark:bg-gray-900 max-h-60 overflow-auto" dangerouslySetInnerHTML={{ __html: renderPreview() }} />
-              </div>
-            )}
 
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setStep(2)}
-                disabled={
-                  !form.senderEmail ||
-                  (form.provider === 'sendgrid' && !form.sendgridApiKey) ||
-                  (form.provider === 'smtp' && !form.smtpHost) ||
-                  (bodyMode === 'html' ? !form.body : !form.templateId)
-                }
+                disabled={!settingsReady}
                 className="btn-primary"
               >
                 Continue <ChevronRight className="w-4 h-4" />
@@ -475,7 +384,7 @@ export default function CreateCampaign() {
               <button onClick={() => setStep(1)} className="btn-ghost"><ChevronLeft className="w-4 h-4" /> Back</button>
               <button
                 onClick={handleCreateCampaign}
-                disabled={sending || !file || !csvPreview?.validation.valid}
+                disabled={sending || !file || !csvPreview || !csvPreview.validation.valid}
                 className="btn-primary"
               >
                 {sending ? 'Creating...' : <>Review <ChevronRight className="w-4 h-4" /></>}
@@ -493,14 +402,12 @@ export default function CreateCampaign() {
           <div className="card-body space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { label: 'Name', value: form.name, icon: Settings },
-                { label: 'Provider', value: form.provider === 'sendgrid' ? 'SendGrid' : 'SMTP', icon: form.provider === 'sendgrid' ? Mail : Server },
-                { label: 'Subject', value: form.subject, icon: Send },
+                { label: 'Name', value: form.name || 'Auto-generated', icon: Settings },
+                { label: 'Provider', value: 'SendGrid', icon: Send },
+                { label: 'Subject', value: form.subject || 'From template', icon: Send },
                 { label: 'Recipients', value: `${uploadResult?.totalRecipients?.toLocaleString() || 0} contacts`, icon: Users },
-                { label: 'Sender', value: `${form.senderName} <${form.senderEmail}>`, icon: Mail },
-                bodyMode === 'template'
-                  ? { label: 'Template ID', value: form.templateId, icon: Hash }
-                  : { label: 'Content', value: 'HTML body', icon: Code },
+                { label: 'Sender', value: `${form.senderName} <${mailSettings.senderEmail}>`, icon: Send },
+                { label: 'Template ID', value: mailSettings.templateId, icon: Hash },
               ].map(({ label, value, icon: Icon }) => (
                 <div key={label} className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                   <div className="flex items-center gap-1.5 mb-1">
@@ -523,9 +430,88 @@ export default function CreateCampaign() {
               </div>
             )}
 
+            {dryRunReport && (
+              <div className={`rounded-lg border p-3 text-sm space-y-2 ${
+                dryRunReport.valid
+                  ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900 dark:bg-emerald-950/20'
+                  : 'border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/20'
+              }`}>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  Pre-send validation {dryRunReport.valid ? 'passed' : 'failed'}
+                </p>
+                <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                  <li>Recipients: {dryRunReport.recipientCount.toLocaleString()} ({dryRunReport.pendingCount.toLocaleString()} pending)</li>
+                  {dryRunReport.templateId && <li>Template ID: {dryRunReport.templateId}</li>}
+                  {dryRunReport.requiredVariables.length > 0 && (
+                    <li>Required vars: {dryRunReport.requiredVariables.join(', ')}</li>
+                  )}
+                  {dryRunReport.missingVariables.length > 0 && (
+                    <li className="text-amber-700 dark:text-amber-300">
+                      Missing: {dryRunReport.missingVariables.join(', ')}
+                    </li>
+                  )}
+                  {dryRunReport.columns.length > 0 && (
+                    <li>Columns: {dryRunReport.columns.join(', ')}</li>
+                  )}
+                </ul>
+                {dryRunReport.warnings.length > 0 && (
+                  <ul className="text-xs text-amber-700 dark:text-amber-300 list-disc list-inside">
+                    {dryRunReport.warnings.map((w) => <li key={w}>{w}</li>)}
+                  </ul>
+                )}
+                {dryRunReport.errors.length > 0 && (
+                  <ul className="text-xs text-amber-800 dark:text-amber-200 list-disc list-inside">
+                    {dryRunReport.errors.map((e) => <li key={e}>{e}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2 pt-2">
+              <div>
+                <label className="label">
+                  Test email <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="you@company.com, teammate@company.com"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                />
+                <p className="help-text">
+                  Comma-separated addresses OK. Blank = first CSV row. Always uses first-row template data.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleDryRun}
+                  disabled={dryRunning || sending}
+                  className="btn-secondary"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  {dryRunning ? 'Validating…' : 'Dry run'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTestSend}
+                  disabled={testSending || sending}
+                  className="btn-secondary"
+                >
+                  <FlaskConical className="w-4 h-4" />
+                  {testSending ? 'Sending…' : 'Send test'}
+                </button>
+              </div>
+            </div>
+
             <div className="flex gap-3 pt-2">
               <button onClick={() => navigate(`/campaigns/${campaignId}`)} className="btn-secondary flex-1">Save as draft</button>
-              <button onClick={handleStartCampaign} disabled={sending} className="btn-success flex-1">
+              <button
+                onClick={handleStartCampaign}
+                disabled={sending || (dryRunReport !== null && !dryRunReport.valid)}
+                className="btn-success flex-1"
+              >
                 {sending ? 'Launching...' : <><Send className="w-4 h-4" /> Launch campaign</>}
               </button>
             </div>

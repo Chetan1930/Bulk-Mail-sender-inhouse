@@ -7,7 +7,7 @@ A managed bulk email campaign platform. Customers sign in with credentials you p
 - **Campaign Management**: Create, duplicate, and manage email campaigns
 - **CSV/XLSX Upload**: Upload recipient lists with dynamic variable support
 - **Email Preview**: Preview rendered emails before sending
-- **Multiple Providers**: SendGrid and SMTP support (extensible)
+- **SendGrid Delivery**: Per-browser SendGrid settings for campaign delivery
 - **Concurrent Sending**: 5 concurrent workers powered by BullMQ + Redis
 - **Real-Time Progress**: WebSocket-based live progress tracking
 - **Campaign Analytics**: Dashboard with charts and statistics
@@ -58,7 +58,7 @@ npm run dev  # Starts on http://localhost:5173
 
 ### 4. Login
 
-Open http://localhost:5173 and sign in with credentials you provision in `.env` (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`). Public registration is disabled by default (`ALLOW_PUBLIC_SIGNUP=false`).
+Open http://localhost:5173 and sign in with credentials you provision in `.env` (`SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`).
 
 ### Managed access model
 
@@ -76,7 +76,7 @@ mailflow/
 │   ├── src/
 │   │   ├── config/            # Environment config
 │   │   ├── middleware/        # Auth, rate limiting
-│   │   ├── providers/         # Email providers (SendGrid, SMTP)
+│   │   ├── providers/         # SendGrid provider
 │   │   ├── routes/           # API routes
 │   │   ├── services/         # Business logic
 │   │   ├── types/            # TypeScript types
@@ -140,7 +140,7 @@ Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.env` before first deploy.
 1. Set a strong `JWT_SECRET` in `.env`
 2. Set `FRONTEND_URL` to your public URL (e.g. `https://mail.yourcompany.com`)
 3. Set `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, then `SEED_ON_START=false` after first deploy
-4. Enter SendGrid/SMTP credentials in the **campaign create** UI (not in `.env`)
+4. Sign in and save SendGrid sender email, API key, and template ID in **Settings**; they are stored in that browser only
 5. Put a reverse proxy with TLS in front for public access when needed
 
 ### Useful commands
@@ -167,7 +167,6 @@ Use ports **5434** (Postgres) and **6380** (Redis) from `backend/.env.example` w
 | Method | Route | Description |
 |--------|-------|-------------|
 | POST | /api/auth/login | User login |
-| POST | /api/auth/register | Disabled by default (`ALLOW_PUBLIC_SIGNUP=false`) |
 | GET | /api/auth/profile | Get user profile |
 | GET | /api/dashboard/stats | Dashboard statistics |
 | GET | /api/campaigns | List campaigns |
@@ -185,5 +184,4 @@ Use ports **5434** (Postgres) and **6380** (Redis) from `backend/.env.example` w
 The platform uses a provider abstraction pattern:
 
 - **SendGridProvider**: Uses `@sendgrid/mail`
-- **SmtpProvider**: Uses `nodemailer` (any SMTP server)
-- **Extensible**: Add new providers by implementing the `EmailProvider` interface
+- **SendGridProvider**: Uses `@sendgrid/mail`; its API key is supplied from browser Settings only when a campaign is sent

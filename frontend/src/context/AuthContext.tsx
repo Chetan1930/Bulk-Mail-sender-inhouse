@@ -6,83 +6,81 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  /** Returns a tempToken when 2FA is required; otherwise completes login. */
+  login: (email: string, password: string) => Promise<{ requires2fa: true; tempToken: string } | void>;
+  completeLogin2fa: (tempToken: string, code: string) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  openAccess: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function persistSession(user: User, token: string) {
+  localStorage.setItem('token', token);
+  localStorage.setItem('user', JSON.stringify(user));
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [openAccess, setOpenAccess] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function boot() {
-      try {
-        const session = await api.getSession();
-        if (cancelled) return;
-        setOpenAccess(!!session.openAccess);
-        setUser(session.user);
-        setToken(null);
-        localStorage.removeItem('token');
-        localStorage.setItem('user', JSON.stringify(session.user));
-      } catch {
-        // Fallback: try legacy token session
-        const savedToken = localStorage.getItem('token');
-        const savedUser = localStorage.getItem('user');
-        if (savedToken && savedUser) {
-          try {
-            const profile = await api.getProfile();
-            if (cancelled) return;
-            setToken(savedToken);
-            setUser(profile);
-            setOpenAccess(false);
-          } catch {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-          }
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    const savedToken = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    if (!savedToken || !savedUser) {
+      setLoading(false);
+      return;
     }
 
-    boot();
-    return () => {
-      cancelled = true;
-    };
+    setToken(savedToken);
+    setUser(JSON.parse(savedUser));
+    api.getProfile()
+      .then((profile) => {
+        setUser(profile);
+        localStorage.setItem('user', JSON.stringify(profile));
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const applySession = useCallback((sessionUser: User, sessionToken: string) => {
+    persistSession(sessionUser, sessionToken);
+    setToken(sessionToken);
+    setUser(sessionUser);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     const result = await api.login(email, password);
-    localStorage.setItem('token', result.token);
-    localStorage.setItem('user', JSON.stringify(result.user));
-    setToken(result.token);
-    setUser(result.user);
-    setOpenAccess(false);
+    if (result.requires2fa) {
+      return { requires2fa: true as const, tempToken: result.tempToken };
+    }
+    applySession(result.user, result.token);
+  }, [applySession]);
+
+  const completeLogin2fa = useCallback(async (tempToken: string, code: string) => {
+    const result = await api.verifyLogin2fa(tempToken, code);
+    applySession(result.user, result.token);
+  }, [applySession]);
+
+  const refreshProfile = useCallback(async () => {
+    const profile = await api.getProfile();
+    setUser(profile);
+    localStorage.setItem('user', JSON.stringify(profile));
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
-    // Open access: stay signed in as operator
-    api.getSession()
-      .then((session) => {
-        setUser(session.user);
-        setToken(null);
-        setOpenAccess(true);
-        localStorage.setItem('user', JSON.stringify(session.user));
-      })
-      .catch(() => {
-        setUser(null);
-        setToken(null);
-      });
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
   }, []);
 
   return (
@@ -92,10 +90,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         loading,
         login,
+        completeLogin2fa,
+        refreshProfile,
         logout,
         isAuthenticated: !!user,
         isAdmin: user?.role === 'admin',
-        openAccess,
       }}
     >
       {children}

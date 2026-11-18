@@ -1,8 +1,8 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, X, Mail, Settings } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, X, Mail, Settings, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const navItems = [
+const baseNavItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/campaigns/new', icon: PlusCircle, label: 'New Campaign', end: false },
   { to: '/settings', icon: Settings, label: 'Settings', end: false },
@@ -14,8 +14,16 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ open, onClose }: SidebarProps) {
-  const { user } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const location = useLocation();
+
+  const navItems = isAdmin
+    ? [
+        ...baseNavItems.slice(0, 2),
+        { to: '/users', icon: Users, label: 'Users', end: false },
+        ...baseNavItems.slice(2),
+      ]
+    : baseNavItems;
 
   return (
     <>
@@ -70,10 +78,17 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
               {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{user?.name || 'Operator'}</p>
-              <p className="text-xs text-slate-400 truncate">No login required</p>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{user?.name || 'Admin'}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="mt-1 w-full px-3 py-2 text-left text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg"
+          >
+            Sign out
+          </button>
         </div>
       </aside>
     </>

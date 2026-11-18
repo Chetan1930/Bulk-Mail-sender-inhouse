@@ -3,7 +3,19 @@ export interface User {
   email: string;
   name: string;
   role: 'admin' | 'manager';
+  active?: boolean;
+  totpEnabled?: boolean;
   createdAt: string;
+}
+
+export type LoginResult =
+  | { requires2fa: true; tempToken: string }
+  | { requires2fa: false; user: User; token: string };
+
+export interface UserBrief {
+  id: string;
+  email: string;
+  name: string;
 }
 
 export interface RecipientStatusCounts {
@@ -46,12 +58,12 @@ export interface Campaign {
     truncated: boolean;
   };
   retryCount: number;
-  smtpConfig: SmtpConfig | null;
-  sendgridApiKey: string | null;
   scheduledAt: string | null;
   createdAt: string;
   userId: string;
-  user?: User;
+  startedByUserId?: string | null;
+  user?: UserBrief;
+  startedBy?: UserBrief | null;
   recipients?: CampaignRecipient[];
   logs?: CampaignLog[];
   _count?: { recipients: number };
@@ -80,14 +92,6 @@ export interface CampaignLog {
   createdAt: string;
 }
 
-export interface SmtpConfig {
-  host: string;
-  port: number;
-  user: string;
-  pass: string;
-  secure?: boolean;
-}
-
 export interface DashboardStats {
   totalCampaigns: number;
   totalSent: number;
@@ -101,6 +105,8 @@ export interface DashboardStats {
     sentCount: number;
     failedCount: number;
     createdAt: string;
+    user?: UserBrief;
+    startedBy?: UserBrief | null;
   }>;
 }
 
@@ -121,6 +127,8 @@ export interface CsvPreview {
   preview: Record<string, string>[];
   totalRows: number;
   emailField: string | null;
+  /** Soft warning when API key cannot read templates (Mail Send–only keys). */
+  templateWarning?: string | null;
   variableValidation: {
     missing: string[];
     found: string[];
@@ -128,6 +136,21 @@ export interface CsvPreview {
     required: string[];
   } | null;
   validation: SheetValidation;
+}
+
+export interface DryRunReport {
+  valid: boolean;
+  recipientCount: number;
+  pendingCount: number;
+  columns: string[];
+  templateId: string | null;
+  subject: string;
+  senderEmail: string;
+  requiredVariables: string[];
+  missingVariables: string[];
+  invalidEmails: string[];
+  errors: string[];
+  warnings: string[];
 }
 
 export interface WsMessage {

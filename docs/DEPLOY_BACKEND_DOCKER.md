@@ -191,18 +191,9 @@ FRONTEND_URL=http://localhost
 
 JWT_SECRET=paste-a-long-random-string-here
 
-ALLOW_PUBLIC_SIGNUP=false
-SEED_ON_START=true
 SEED_ADMIN_EMAIL=ADMIN_EMAIL
 SEED_ADMIN_PASSWORD=ADMIN_PASSWORD
 SEED_ADMIN_NAME=Admin
-
-# Optional until you test real sending
-SENDGRID_API_KEY=
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_USER=
-SMTP_PASS=
 ```
 
 Generate a secret if needed:
@@ -445,29 +436,9 @@ Copy `token` from the response. In Postman, create a collection variable `token`
   "name": "Test campaign",
   "subject": "Hello {{name}}",
   "body": "<p>Hi {{name}}, this is a test.</p>",
-  "provider": "smtp",
   "senderEmail": "you@example.com",
   "senderName": "MailFlow",
-  "smtpConfig": {
-    "host": "smtp.example.com",
-    "port": 587,
-    "user": "smtp-user",
-    "pass": "smtp-pass"
-  }
-}
-```
-
-For SendGrid instead of SMTP, use:
-
-```json
-{
-  "name": "Test campaign",
-  "subject": "Hello {{name}}",
-  "body": "<p>Hi {{name}}</p>",
-  "provider": "sendgrid",
-  "senderEmail": "you@example.com",
-  "senderName": "MailFlow",
-  "sendgridApiKey": "SG.xxxxx"
+  "templateId": "d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 }
 ```
 
@@ -501,6 +472,7 @@ bob@example.com,Bob
 | Method | `POST` |
 | URL | `{{baseUrl}}/api/campaigns/{{campaignId}}/start` |
 | Auth | Bearer `{{token}}` |
+| Body | raw JSON: `{ "sendgridApiKey": "SG.xxxxx" }` |
 
 ---
 
@@ -522,7 +494,6 @@ bob@example.com,Bob
 | `POST` | `/api/campaigns/{{id}}/recipients/{{recipientId}}/retry` | Single retry |
 | `GET` | `/api/campaigns/{{id}}/export-failed` | Failed emails export |
 | `POST` | `/api/campaigns/parse-csv` | Preview parse (form-data `file`) |
-| `POST` | `/api/auth/register` | **403** unless `ALLOW_PUBLIC_SIGNUP=true` |
 
 WebSocket (not Postman REST): `ws://YOUR_API_HOST/ws` or `wss://...` after HTTPS.
 

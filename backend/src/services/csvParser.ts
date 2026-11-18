@@ -70,12 +70,15 @@ export class CsvParserService {
   }
 
   static detectVariables(template: string): string[] {
-    const regex = /\{\{(\w+)\}\}/g;
+    // Match {{var}} / {{ var }}; skip Handlebars helpers ({{#if}}, {{/each}}, {{else}})
+    const regex = /\{\{\s*(?!else\b)([#/]?[\w.]+)\s*\}\}/g;
     const variables: string[] = [];
     let match;
     while ((match = regex.exec(template)) !== null) {
-      if (!variables.includes(match[1])) {
-        variables.push(match[1]);
+      const name = match[1];
+      if (name.startsWith('#') || name.startsWith('/')) continue;
+      if (!variables.includes(name)) {
+        variables.push(name);
       }
     }
     return variables;
@@ -227,8 +230,13 @@ export class CsvParserService {
   }
 
   static renderTemplate(template: string, variables: Record<string, string>): string {
-    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
-      return variables[key] || `{{${key}}}`;
+    const lookup = new Map<string, string>();
+    for (const [k, v] of Object.entries(variables)) {
+      lookup.set(k.toLowerCase().trim(), v ?? '');
+    }
+    return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+      const value = lookup.get(key.toLowerCase());
+      return value !== undefined ? value : `{{${key}}}`;
     });
   }
 

@@ -10,14 +10,6 @@ export interface AuthRequest extends Request {
   user?: UserPayload;
 }
 
-export interface SmtpConfig {
-  host: string;
-  port: number;
-  user: string;
-  pass: string;
-  secure?: boolean;
-}
-
 export interface CsvRow {
   [key: string]: string;
 }
@@ -47,4 +39,3 @@ export interface DashboardData {
   sentOverTime: Array<{ date: string; sent: number; failed: number }>;
 }
 
-export type EmailProviderType = 'sendgrid' | 'smtp' | 'ses';

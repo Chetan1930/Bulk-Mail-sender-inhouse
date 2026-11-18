@@ -146,6 +146,7 @@ export default function Dashboard() {
                 <tr>
                   <th>Name</th>
                   <th>Status</th>
+                  <th>Created by</th>
                   <th className="text-right">Recipients</th>
                   <th className="text-right">Sent</th>
                   <th className="text-right">Failed</th>
@@ -157,6 +158,7 @@ export default function Dashboard() {
                   <tr key={c.id}>
                     <td className="font-medium text-slate-700 dark:text-slate-200">{c.name}</td>
                     <td><span className={statusBadge[c.status] || 'badge-gray'}>{c.status}</span></td>
+                    <td className="text-slate-500 text-sm">{c.user?.name || c.user?.email || '—'}</td>
                     <td className="text-right tabular-nums">{c.totalRecipients.toLocaleString()}</td>
                     <td className="text-right tabular-nums text-emerald-600 dark:text-emerald-400">{c.sentCount.toLocaleString()}</td>
                     <td className="text-right tabular-nums text-rose-500 dark:text-rose-400">{c.failedCount.toLocaleString()}</td>
